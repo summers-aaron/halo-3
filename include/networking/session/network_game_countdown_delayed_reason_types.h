@@ -1,0 +1,13 @@
+#ifndef NETWORKING_SESSION_NETWORK_GAME_COUNTDOWN_DELAYED_REASON_TYPES_H
+#define NETWORKING_SESSION_NETWORK_GAME_COUNTDOWN_DELAYED_REASON_TYPES_H
+
+enum e_network_game_countdown_delayed_reason
+{
+    _network_game_countdown_delayed_reason_none = 0,
+    _network_game_countdown_delayed_reason_player,
+    _network_game_countdown_delayed_reason_party_changed,
+
+    k_network_game_countdown_delayed_reason_count
+};
+
+#endif // NETWORKING_SESSION_NETWORK_GAME_COUNTDOWN_DELAYED_REASON_TYPES_H

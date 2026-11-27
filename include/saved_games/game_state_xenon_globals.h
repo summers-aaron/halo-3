@@ -1,0 +1,7 @@
+#ifndef SAVED_GAMES_GAME_STATE_XENON_GLOBALS_H
+#define SAVED_GAMES_GAME_STATE_XENON_GLOBALS_H
+
+struct s_xenon_game_state_globals;
+extern s_xenon_game_state_globals xenon_game_state_globals;
+
+#endif

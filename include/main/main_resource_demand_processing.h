@@ -1,0 +1,11 @@
+#ifndef MAIN_MAIN_RESOURCE_DEMAND_PROCESSING_H
+#define MAIN_MAIN_RESOURCE_DEMAND_PROCESSING_H
+
+struct s_tag_resource_paging_controller;
+class c_wrapped_flags;
+class c_tag_resource_page_table_control_interface;
+class c_tag_resource_controller_page_table_io_listener;
+extern "C" void main_render_process_demanded_resources(s_tag_resource_paging_controller *controller, const c_wrapped_flags *flags,
+    c_tag_resource_page_table_control_interface *control_interface, c_tag_resource_controller_page_table_io_listener *listener, bool *active);
+
+#endif // MAIN_MAIN_RESOURCE_DEMAND_PROCESSING_H

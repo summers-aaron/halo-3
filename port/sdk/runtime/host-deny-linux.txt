@@ -1,0 +1,18 @@
+# Host functions the game must not bind to on Linux: glibc defines them under the same name with another meaning.
+# The link stubs each one the game refers to (port/build/link-stage1.sh) unless a port object defines it.
+# Winsock: SOCKET handles, Winsock's fd_set (a count and an array, not a bit mask) and its error model.
+accept
+bind
+closesocket
+connect
+inet_addr
+ioctlsocket
+listen
+recv
+recvfrom
+select
+send
+sendto
+setsockopt
+shutdown
+socket

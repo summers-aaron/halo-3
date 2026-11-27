@@ -1,0 +1,11 @@
+#ifndef GAME_GAME_RESULTS_PLAYER_VS_PLAYER_STATISTIC_TYPES_H
+#define GAME_GAME_RESULTS_PLAYER_VS_PLAYER_STATISTIC_TYPES_H
+
+enum e_game_results_player_vs_player_statistic
+{
+    _game_results_player_vs_player_statistic_kills,
+    _game_results_player_vs_player_statistic_deaths,
+    k_game_results_player_vs_player_statistic_count
+};
+
+#endif // GAME_GAME_RESULTS_PLAYER_VS_PLAYER_STATISTIC_TYPES_H

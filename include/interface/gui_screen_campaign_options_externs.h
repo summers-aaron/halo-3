@@ -1,0 +1,10 @@
+#ifndef INTERFACE_GUI_SCREEN_CAMPAIGN_OPTIONS_EXTERNS_H
+#define INTERFACE_GUI_SCREEN_CAMPAIGN_OPTIONS_EXTERNS_H
+
+struct s_autosave_queue;
+enum e_controller_index;
+long autosave_queue_save_current_game_variant_to_queue(s_autosave_queue *, e_controller_index);
+
+
+
+#endif // INTERFACE_GUI_SCREEN_CAMPAIGN_OPTIONS_EXTERNS_H

@@ -1,0 +1,38 @@
+# Reference Flatpak manifest for Halo 3 (Native 64-bit PC Port).
+#
+# Reproducible single-file .flatpak bundles are assembled directly inside the pinned
+# Debian 11 build container by `port/build/container/build.sh flatpak` using the exact
+# runtime, command, and sandbox permissions declared below (without requiring nested bwrap).
+app-id: io.github.summers_aaron.Halo3
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: halo3-launcher
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=pulseaudio
+  - --device=all
+  - --share=network
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --env=HALO3_VULKAN=1
+  - --env=PORT_STUB_CONTINUE=1
+modules:
+  - name: halo3-pc-port
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 halo3-launcher /app/bin/halo3-launcher
+      - install -Dm755 halo3          /app/bin/halo3
+      - install -Dm755 xiso           /app/bin/xiso
+      - install -Dm755 xex2pe         /app/bin/xex2pe
+      - install -Dm755 shaderpack       /app/bin/shaderpack
+      - install -Dm755 extract-odst-dlc /app/bin/extract-odst-dlc
+      - install -Dm644 pipeline_keys.bin /app/bin/pipeline_keys.bin
+      - install -Dm644 fonts/halo3.otf /app/bin/fonts/halo3.otf
+      - if [ -f fonts/D-DIN.ttf ]; then install -m644 fonts/D-DIN.ttf fonts/COPYING.txt /app/bin/fonts/; fi
+      - install -Dm644 VERSION        /app/share/halo3/VERSION
+      - install -Dm644 SHADER_ABI     /app/share/halo3/SHADER_ABI
+      - install -Dm644 BUILD_MANIFEST /app/share/halo3/BUILD_MANIFEST
+      - install -Dm644 io.github.summers_aaron.Halo3.desktop      /app/share/applications/io.github.summers_aaron.Halo3.desktop
+      - install -Dm644 io.github.summers_aaron.Halo3.metainfo.xml /app/share/metainfo/io.github.summers_aaron.Halo3.metainfo.xml
+      - install -Dm644 halo3.svg      /app/share/icons/hicolor/scalable/apps/io.github.summers_aaron.Halo3.svg

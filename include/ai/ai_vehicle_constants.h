@@ -1,0 +1,4 @@
+#ifndef AI_AI_VEHICLE_CONSTANTS_H
+#define AI_AI_VEHICLE_CONSTANTS_H
+
+#endif

@@ -1,0 +1,73 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// new: the global allocation and deallocation functions (plain, array, placement, nothrow) and std::new_handler.
+#pragma once
+#ifndef _NEW_
+#define _NEW_
+#include <exception>
+
+#pragma pack(push, _CRT_PACKING)
+#pragma push_macro("new")
+#undef new
+
+#ifndef __CRTDECL
+#define __CRTDECL __cdecl
+#endif
+
+_STD_BEGIN
+// <new.h> (read first under MS extensions) has already declared the handler type.
+#if !defined(_INC_NEW) || !defined(_MSC_EXTENSIONS)
+typedef void(__cdecl *new_handler)();
+#endif
+#ifndef __NOTHROW_T_DEFINED
+struct nothrow_t
+{
+};
+extern const nothrow_t nothrow;
+#endif
+_CRTIMP2 new_handler __cdecl set_new_handler(new_handler) _THROW0();
+_STD_END
+
+void __CRTDECL operator delete(void *) _THROW0();
+void *__CRTDECL operator new(size_t _Size) _THROW1(std::bad_alloc);
+
+#ifndef __PLACEMENT_NEW_INLINE
+#define __PLACEMENT_NEW_INLINE
+inline void *__CRTDECL operator new(size_t, void *where) _THROW0()
+{
+    return where;
+}
+inline void __CRTDECL operator delete(void *, void *) _THROW0()
+{
+}
+#endif
+
+#ifndef __PLACEMENT_VEC_NEW_INLINE
+#define __PLACEMENT_VEC_NEW_INLINE
+inline void *__CRTDECL operator new[](size_t, void *where) _THROW0()
+{
+    return where;
+}
+inline void __CRTDECL operator delete[](void *, void *) _THROW0()
+{
+}
+#endif
+
+void __CRTDECL operator delete[](void *) _THROW0();
+void *__CRTDECL operator new[](size_t _Size) _THROW1(std::bad_alloc);
+
+#ifndef __NOTHROW_T_DEFINED
+#define __NOTHROW_T_DEFINED
+void *__CRTDECL operator new(size_t _Size, const std::nothrow_t &) _THROW0();
+void *__CRTDECL operator new[](size_t _Size, const std::nothrow_t &) _THROW0();
+void __CRTDECL operator delete(void *, const std::nothrow_t &) _THROW0();
+void __CRTDECL operator delete[](void *, const std::nothrow_t &) _THROW0();
+#endif
+
+#if !defined(_INC_NEW) || !defined(_MSC_EXTENSIONS)
+using std::new_handler;
+#endif
+
+#pragma pop_macro("new")
+#pragma pack(pop)
+
+#endif // _NEW_

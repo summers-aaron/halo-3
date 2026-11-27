@@ -1,0 +1,3 @@
+# the port's HLSL patches (port/tools/shaderpack/stage.sh applies them) are sources: track them despite the
+# top-level *.diff rule
+!*.diff

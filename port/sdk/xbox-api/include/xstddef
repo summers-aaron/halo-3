@@ -1,0 +1,68 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// xstddef: C++ library internals shared by every library header: exception-mode macros and small helpers.
+#pragma once
+#ifndef _XSTDDEF_
+#define _XSTDDEF_
+#ifndef _YVALS
+#include <yvals.h>
+#endif
+#include <cstddef>
+
+#pragma pack(push, _CRT_PACKING)
+
+_STD_BEGIN
+
+#if _HAS_EXCEPTIONS
+#define _TRY_BEGIN try {
+#define _CATCH(x) } catch (x) {
+#define _CATCH_ALL } catch (...) {
+#define _CATCH_END }
+#define _RAISE(x) throw (x)
+#define _RERAISE throw
+#define _THROW0() throw ()
+#define _THROW1(x) throw (...)
+#define _THROW(x, y) throw x(y)
+#else
+// Without exceptions a try block is a plain block, a handler is dead code, and raising goes through
+// exception::_Raise / std::_Throw.
+#define _TRY_BEGIN {{
+#define _CATCH(x) } if (0) {
+#define _CATCH_ALL } if (0) {
+#define _CATCH_END }}
+#define _RAISE(x) ::std:: _Throw(x)
+#define _RERAISE
+#define _THROW0()
+#define _THROW1(x)
+#define _THROW(x, y) x(y)._Raise()
+#endif
+#define _THROW_NCEE(x, y) _THROW(x, y)
+#define _EMPTY_ARGUMENT
+
+#define _BITMASK(Enum, Ty) typedef int Ty
+#define _BITMASK_OPS(Ty)
+
+#define _DESTRUCTOR(ty, ptr) (ptr)->~ty()
+// Library message strings go through _MESG so a translation unit can drop them.
+#define _MESG(str) str
+#define _PROTECTED protected
+#define _TDEF(x) = x
+#define _TDEF2(x, y) = x, y
+#define _STCONS(ty, name, val) static const ty name = (ty)(val)
+#define _STCONSDEF(cls, ty, name)
+
+#ifndef _XSTD
+#define _X_STD_BEGIN _STD_BEGIN
+#define _X_STD_END _STD_END
+#define _XSTD std::
+#endif
+
+enum _Uninitialized
+{
+    _Noinit
+};
+
+_STD_END
+
+#pragma pack(pop)
+
+#endif // _XSTDDEF_

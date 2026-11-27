@@ -1,0 +1,29 @@
+--- hlsl/restore_ldr_hdr_depth.hlsl
++++ hlsl/restore_ldr_hdr_depth.hlsl
+@@ -22,8 +22,15 @@
+ 	
+ 	float4 ldr_color, hdr_color;
+ #ifdef pc
+-	ldr_color= sample2D(ldr_sampler, IN.texcoord);
+-	hdr_color= sample2D(hdr_sampler, IN.texcoord);
++	// fetch by pixel, as the Xbox branch does: the quad is the EDRAM-pitch alias of the depth buffer (1200 wide for
++	// 1152), so IN.texcoord would stretch the 1152-wide scene over it (port M5H, REPORT_VISUAL_BUGS P0-2)
++	uint2 ldr_size, hdr_size, depth_size;
++	ldr_sampler.t.GetDimensions(ldr_size.x, ldr_size.y);
++	hdr_sampler.t.GetDimensions(hdr_size.x, hdr_size.y);
++	depth_sampler.t.GetDimensions(depth_size.x, depth_size.y);
++	int2 pixel= int2(pixel_coordinates.xy);
++	ldr_color= ldr_sampler.t.Load(int3(min(pixel, int2(ldr_size) - 1), 0));
++	hdr_color= hdr_sampler.t.Load(int3(min(pixel, int2(hdr_size) - 1), 0));
+ #else
+ 	asm
+ 	{
+@@ -36,7 +43,7 @@
+  	
+ 	float4 depth_color;
+ #ifdef pc
+-	depth_color= sample2D(depth_sampler, IN.texcoord);
++	depth_color= depth_sampler.t.Load(int3(min(pixel, int2(depth_size) - 1), 0));
+ #else
+  	float column= pixel_coordinates.x / 80;
+  	float halfcolumn= frac( column );

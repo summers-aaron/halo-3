@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Halo 3
+Comment=Native 64-bit PC Port of Halo 3 (Xbox 360)
+Exec=halo3-launcher %f
+Icon=halo3
+Categories=Game;ActionGame;Shooter;
+Terminal=false
+MimeType=application/x-cd-image;
+Actions=Setup;
+
+[Desktop Action Setup]
+Name=Setup & Maintenance
+Exec=halo3-launcher --setup

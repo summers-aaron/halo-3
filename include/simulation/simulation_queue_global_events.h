@@ -1,0 +1,26 @@
+#ifndef SIMULATION_SIMULATION_QUEUE_GLOBAL_EVENTS_H
+#define SIMULATION_SIMULATION_QUEUE_GLOBAL_EVENTS_H
+
+#include "simulation/simulation_queue_player_event_types.h"
+#include "simulation/simulation_queue_global_event_types.h"
+
+// Functions defined in tu/networkinglibxbox/simulation_queue_global_events.cpp that other units call.
+
+struct s_simulation_queue_element;
+struct s_simulation_queue_gamestate_clear_data;
+struct simulation_player_update;
+
+void simulation_queue_player_event_apply(const s_simulation_queue_element *element);
+void simulation_queue_player_update_insert(const simulation_player_update *player_update);
+void simulation_queue_player_update_apply(const s_simulation_queue_element *element);
+void simulation_queue_gamestates_delete_insert(const s_simulation_queue_gamestate_clear_data *clear_data);
+void simulation_queue_gamestates_delete_apply(const s_simulation_queue_element *element);
+void simulation_queue_sandbox_event_apply(const s_simulation_queue_element *element);
+extern "C" void simulation_queue_game_global_event_apply(const s_simulation_queue_element *element);
+void simulation_queue_game_global_event_insert(e_simulation_queue_game_global_event_type event_type);
+
+struct s_simulation_queue_player_event_data;
+
+void simulation_queue_player_event_insert(e_simulation_queue_player_event_type type, long player_index, const s_simulation_queue_player_event_data *data);
+
+#endif // SIMULATION_SIMULATION_QUEUE_GLOBAL_EVENTS_H

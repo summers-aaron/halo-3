@@ -1,0 +1,7 @@
+#ifndef GPU_PARTICLE_PARTICLE_BLOCK_QUEUE_SYSTEM_H
+#define GPU_PARTICLE_PARTICLE_BLOCK_QUEUE_SYSTEM_H
+
+struct particle_block_queue_system;
+extern particle_block_queue_system g_particle_block_queue_system;
+
+#endif

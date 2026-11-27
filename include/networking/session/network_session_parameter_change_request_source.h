@@ -1,0 +1,10 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_CHANGE_REQUEST_SOURCE_H
+#define NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_CHANGE_REQUEST_SOURCE_H
+
+enum e_parameter_change_request_source
+{
+    _parameter_change_request_source_peer,
+    _parameter_change_request_source_leader,
+};
+
+#endif

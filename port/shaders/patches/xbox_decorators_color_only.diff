@@ -1,0 +1,29 @@
+--- hlsl/decorators.hlsl
++++ hlsl/decorators.hlsl
+@@ -313,11 +313,10 @@
+ //    be careful changing this code.  it is optimized to use very few GPRs + interpolators
+ //			current optimized shader:	3 GPRs
+ 
+-#ifdef pc
+-albedo_pixel
+-#else   
++// port: the Xbox draws decorators first in the albedo pass, already lit, into the target whose EDRAM the lighting pass
++// then keeps as its LDR target (the decorators skip the lighting pass); the normal target is bound beside it. Return
++// the lit color to SV_Target0 only, as the Xbox branch does (as albedo_pixel, SV_Target1 got the normal).
+ float4 
+-#endif 
+ default_ps(
+ 	SCREEN_POSITION_INPUT(screen_position),
+ 	in float4	texcoord			:	TEXCOORD0,								// z coordinate is unclamped cosine lobe for the 'sun'
+@@ -355,11 +354,7 @@
+ 	color.a *= (0.5f / k_decorator_alpha_test_threshold);						// convert alpha for alpha-to-coverage (0.5f based)
+ #endif
+ 
+-#ifdef pc
+-	return convert_to_albedo_target(color, normal, position_w);
+-#else   
+ 	return color;
+-#endif // pc
+ }
+ 
+ #endif // DECORATOR_EDIT

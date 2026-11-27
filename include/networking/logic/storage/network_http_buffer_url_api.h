@@ -1,0 +1,9 @@
+#ifndef NETWORKING_LOGIC_STORAGE_NETWORK_HTTP_BUFFER_URL_API_H
+#define NETWORKING_LOGIC_STORAGE_NETWORK_HTTP_BUFFER_URL_API_H
+
+class c_http_buffer_downloader;
+struct s_network_http_buffer_url;
+
+extern "C" void http_buffer_downloader_set_url(c_http_buffer_downloader *downloader, const s_network_http_buffer_url *url);
+
+#endif // NETWORKING_LOGIC_STORAGE_NETWORK_HTTP_BUFFER_URL_API_H

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Halo 3
+GenericName=First-Person Shooter
+Comment=Native 64-bit PC Port of Halo 3 (Xbox 360)
+Exec=halo3-launcher %f
+Icon=io.github.summers_aaron.Halo3
+Categories=Game;ActionGame;Shooter;
+Keywords=Halo;FPS;Shooter;Xbox;
+Terminal=false
+StartupWMClass=io.github.summers_aaron.Halo3
+MimeType=application/x-cd-image;
+Actions=Setup;
+
+[Desktop Action Setup]
+Name=Setup & Maintenance
+Exec=halo3-launcher --setup

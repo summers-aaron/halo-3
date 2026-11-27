@@ -1,0 +1,244 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// iosfwd: stream position types, std::char_traits<char> (the string library's element operations) and the
+// forward declarations of the stream templates.
+#pragma once
+#ifndef _IOSFWD_
+#define _IOSFWD_
+#include <cstdio>
+#include <cstring>
+#include <cwchar>
+#include <xstddef>
+#include <crtdbg.h>
+
+#pragma pack(push, _CRT_PACKING)
+
+_STD_BEGIN
+
+typedef long streamoff;
+typedef int streamsize;
+
+template<class _Statetype> class fpos;
+typedef fpos<_Mbstatet> streampos;
+typedef streampos wstreampos;
+
+// Traits that provide the bounded _Copy_s / _Move_s operations are "secure"; the string code picks the copy
+// routine by this tag.
+struct _Unsecure_char_traits_tag
+{
+};
+struct _Secure_char_traits_tag
+{
+};
+
+// Base for user traits: a user traits class derives from it and states its own tag.
+struct _Char_traits_base
+{
+    typedef _Unsecure_char_traits_tag _Secure_char_traits;
+};
+
+template<class _Elem> struct char_traits;
+
+template<> struct _CRTIMP2_PURE char_traits<char> : public _Char_traits_base
+{
+    typedef char _Elem;
+    typedef _Elem char_type;
+    typedef int int_type;
+    typedef streampos pos_type;
+    typedef streamoff off_type;
+    typedef _Mbstatet state_type;
+
+    static void __CLRCALL_OR_CDECL assign(_Elem &dst, const _Elem &src)
+    {
+        dst = src;
+    }
+
+    static bool __CLRCALL_OR_CDECL eq(const _Elem &a, const _Elem &b)
+    {
+        return a == b;
+    }
+
+    static bool __CLRCALL_OR_CDECL lt(const _Elem &a, const _Elem &b)
+    {
+        return a < b;
+    }
+
+    static int __CLRCALL_OR_CDECL compare(const _Elem *a, const _Elem *b, size_t count)
+    {
+        return ::memcmp(a, b, count);
+    }
+
+    static size_t __CLRCALL_OR_CDECL length(const _Elem *string)
+    {
+        return ::strlen(string);
+    }
+
+    // The unbounded forms assume the destination holds count elements.
+    static _Elem *__CLRCALL_OR_CDECL copy(_Elem *dst, const _Elem *src, size_t count)
+    {
+        return _Copy_s(dst, count, src, count);
+    }
+
+    static _Elem *__CLRCALL_OR_CDECL _Copy_s(_Elem *dst, size_t dst_size, const _Elem *src, size_t count)
+    {
+        _CRT_SECURE_MEMCPY(dst, dst_size, src, count);
+        return dst;
+    }
+
+    static const _Elem *__CLRCALL_OR_CDECL find(const _Elem *string, size_t count, const _Elem &ch)
+    {
+        return (const _Elem *)::memchr(string, ch, count);
+    }
+
+    static _Elem *__CLRCALL_OR_CDECL move(_Elem *dst, const _Elem *src, size_t count)
+    {
+        return _Move_s(dst, count, src, count);
+    }
+
+    static _Elem *__CLRCALL_OR_CDECL _Move_s(_Elem *dst, size_t dst_size, const _Elem *src, size_t count)
+    {
+        _CRT_SECURE_MEMMOVE(dst, dst_size, src, count);
+        return dst;
+    }
+
+    static _Elem *__CLRCALL_OR_CDECL assign(_Elem *dst, size_t count, _Elem ch)
+    {
+        return (_Elem *)::memset(dst, ch, count);
+    }
+
+    static _Elem __CLRCALL_OR_CDECL to_char_type(const int_type &meta)
+    {
+        return (_Elem)meta;
+    }
+
+    static int_type __CLRCALL_OR_CDECL to_int_type(const _Elem &ch)
+    {
+        return (unsigned char)ch;
+    }
+
+    static bool __CLRCALL_OR_CDECL eq_int_type(const int_type &a, const int_type &b)
+    {
+        return a == b;
+    }
+
+    static int_type __CLRCALL_OR_CDECL eof()
+    {
+        return EOF;
+    }
+
+    static int_type __CLRCALL_OR_CDECL not_eof(const int_type &meta)
+    {
+        return meta != eof() ? meta : !eof();
+    }
+};
+
+// The tag of a traits class: the library's own char_traits are secure; a class derived from _Char_traits_base
+// states its tag; anything else is unsecure.
+template<class _Traits, bool _Derived> class _Char_traits_category_helper
+{
+public:
+    typedef _Unsecure_char_traits_tag _Secure_char_traits;
+};
+
+template<class _Traits> class _Char_traits_category_helper<_Traits, true>
+{
+public:
+    typedef typename _Traits::_Secure_char_traits _Secure_char_traits;
+};
+
+template<class _Elem> class _Char_traits_category_helper<char_traits<_Elem>, true>
+{
+public:
+    typedef _Secure_char_traits_tag _Secure_char_traits;
+};
+
+template<class _Traits> class _Char_traits_category
+{
+public:
+    typedef typename _Char_traits_category_helper<_Traits, __is_base_of(_Char_traits_base, _Traits)>::_Secure_char_traits
+        _Secure_char_traits;
+};
+
+template<class _Traits> inline typename _Char_traits_category<_Traits>::_Secure_char_traits _Char_traits_cat()
+{
+    typename _Char_traits_category<_Traits>::_Secure_char_traits _Secure;
+    return _Secure;
+}
+
+// Bounded copy / move through a traits class, by its tag.
+namespace _Traits_helper {
+
+template<class _Traits> inline typename _Traits::char_type *copy_s(typename _Traits::char_type *dst, size_t dst_size,
+    const typename _Traits::char_type *src, size_t count, _Secure_char_traits_tag)
+{
+    return _Traits::_Copy_s(dst, dst_size, src, count);
+}
+
+template<class _Traits> inline typename _Traits::char_type *copy_s(typename _Traits::char_type *dst, size_t,
+    const typename _Traits::char_type *src, size_t count, _Unsecure_char_traits_tag)
+{
+    return _Traits::copy(dst, src, count);
+}
+
+template<class _Traits> inline typename _Traits::char_type *copy_s(typename _Traits::char_type *dst, size_t dst_size,
+    const typename _Traits::char_type *src, size_t count)
+{
+    return copy_s<_Traits>(dst, dst_size, src, count, _Char_traits_cat<_Traits>());
+}
+
+template<class _Traits> inline typename _Traits::char_type *move_s(typename _Traits::char_type *dst, size_t dst_size,
+    const typename _Traits::char_type *src, size_t count, _Secure_char_traits_tag)
+{
+    return _Traits::_Move_s(dst, dst_size, src, count);
+}
+
+template<class _Traits> inline typename _Traits::char_type *move_s(typename _Traits::char_type *dst, size_t,
+    const typename _Traits::char_type *src, size_t count, _Unsecure_char_traits_tag)
+{
+    return _Traits::move(dst, src, count);
+}
+
+template<class _Traits> inline typename _Traits::char_type *move_s(typename _Traits::char_type *dst, size_t dst_size,
+    const typename _Traits::char_type *src, size_t count)
+{
+    return move_s<_Traits>(dst, dst_size, src, count, _Char_traits_cat<_Traits>());
+}
+
+} // namespace _Traits_helper
+
+template<class _Ty> class allocator;
+class ios_base;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_ios;
+template<class _Elem, class _Traits = char_traits<_Elem> > class istreambuf_iterator;
+template<class _Elem, class _Traits = char_traits<_Elem> > class ostreambuf_iterator;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_streambuf;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_istream;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_ostream;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_iostream;
+template<class _Elem, class _Traits = char_traits<_Elem>, class _Alloc = allocator<_Elem> > class basic_stringbuf;
+template<class _Elem, class _Traits = char_traits<_Elem>, class _Alloc = allocator<_Elem> > class basic_istringstream;
+template<class _Elem, class _Traits = char_traits<_Elem>, class _Alloc = allocator<_Elem> > class basic_ostringstream;
+template<class _Elem, class _Traits = char_traits<_Elem>, class _Alloc = allocator<_Elem> > class basic_stringstream;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_filebuf;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_ifstream;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_ofstream;
+template<class _Elem, class _Traits = char_traits<_Elem> > class basic_fstream;
+
+typedef basic_ios<char, char_traits<char> > ios;
+typedef basic_streambuf<char, char_traits<char> > streambuf;
+typedef basic_istream<char, char_traits<char> > istream;
+typedef basic_ostream<char, char_traits<char> > ostream;
+typedef basic_iostream<char, char_traits<char> > iostream;
+typedef basic_stringbuf<char, char_traits<char>, allocator<char> > stringbuf;
+typedef basic_istringstream<char, char_traits<char>, allocator<char> > istringstream;
+typedef basic_ostringstream<char, char_traits<char>, allocator<char> > ostringstream;
+typedef basic_stringstream<char, char_traits<char>, allocator<char> > stringstream;
+typedef basic_filebuf<char, char_traits<char> > filebuf;
+typedef basic_ifstream<char, char_traits<char> > ifstream;
+typedef basic_ofstream<char, char_traits<char> > ofstream;
+typedef basic_fstream<char, char_traits<char> > fstream;
+
+_STD_END
+
+#pragma pack(pop)
+
+#endif // _IOSFWD_

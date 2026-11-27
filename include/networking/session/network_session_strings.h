@@ -1,0 +1,6 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_STRINGS_H
+#define NETWORKING_SESSION_NETWORK_SESSION_STRINGS_H
+
+extern "C" const char k_network_peer_leave_quality_reason[];
+
+#endif // NETWORKING_SESSION_NETWORK_SESSION_STRINGS_H

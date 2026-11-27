@@ -1,0 +1,8 @@
+#ifndef INTERFACE_GUI_CUSTOM_BITMAP_STORAGE_HASH_TYPES_H
+#define INTERFACE_GUI_CUSTOM_BITMAP_STORAGE_HASH_TYPES_H
+
+#include "networking/logic/storage/network_http_request_hash.h"
+
+typedef s_network_http_request_hash s_gui_custom_bitmap_storage_hash;
+
+#endif // INTERFACE_GUI_CUSTOM_BITMAP_STORAGE_HASH_TYPES_H

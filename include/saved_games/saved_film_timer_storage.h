@@ -1,0 +1,7 @@
+#ifndef SAVED_GAMES_SAVED_FILM_TIMER_STORAGE_H
+#define SAVED_GAMES_SAVED_FILM_TIMER_STORAGE_H
+
+struct s_saved_film_timer_globals;
+extern "C" s_saved_film_timer_globals g_saved_film_timer_globals;
+
+#endif // SAVED_GAMES_SAVED_FILM_TIMER_STORAGE_H

@@ -1,0 +1,8 @@
+#ifndef GAME_GAME_RESULTS_DAMAGE_TYPE_DESCRIPTION_TYPES_H
+#define GAME_GAME_RESULTS_DAMAGE_TYPE_DESCRIPTION_TYPES_H
+
+#include "game/game_results_damage_breakdown_types.h"
+
+struct e_game_results_damage_type_description { e_game_results_damage_breakdown_type breakdown_type; };
+
+#endif // GAME_GAME_RESULTS_DAMAGE_TYPE_DESCRIPTION_TYPES_H

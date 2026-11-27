@@ -1,0 +1,6 @@
+#ifndef NETWORKING_LOGIC_NETWORK_SQUAD_SESSION_COUNTDOWN_H
+#define NETWORKING_LOGIC_NETWORK_SQUAD_SESSION_COUNTDOWN_H
+
+extern "C" long network_squad_session_get_countdown_delayed_culprit(void);
+
+#endif // NETWORKING_LOGIC_NETWORK_SQUAD_SESSION_COUNTDOWN_H

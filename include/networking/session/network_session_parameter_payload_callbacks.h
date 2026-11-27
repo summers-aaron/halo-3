@@ -1,0 +1,18 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_PAYLOAD_CALLBACKS_H
+#define NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_PAYLOAD_CALLBACKS_H
+
+#include "networking/session/network_session_parameter_variant_types.h"
+#include "networking/session/network_session_remote_join_types.h"
+#include "networking/session/network_session_parameters_chunked.h"
+
+// Specialized payload callbacks defined by network_session_parameters.cpp.
+template<> inline void c_generic_network_session_parameter_data<s_network_session_parameter_map_variant>::notify_clear();
+template<> inline void c_generic_network_session_parameter_data<s_network_session_parameter_map_variant>::notify_transition_state_to_become_host();
+template<> long c_generic_network_session_parameter_data<s_network_session_parameter_map_variant>::get_change_request_payload_size() const;
+template<> void c_network_session_parameter_chunked<s_network_session_parameter_saved_film_game_options>::clear_internal();
+template<> inline void c_generic_network_session_parameter_data<s_network_session_parameter_saved_film_game_options>::notify_clear();
+template<> inline void c_generic_network_session_parameter_data<s_network_session_parameter_saved_film_game_options>::notify_transition_state_to_become_host();
+template<> long c_generic_network_session_parameter_data<s_network_session_parameter_saved_film_game_options>::get_change_request_payload_size() const;
+template<> long c_generic_network_session_parameter_data<s_network_session_remote_session_join_data>::get_change_request_payload_size() const;
+
+#endif // NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_PAYLOAD_CALLBACKS_H

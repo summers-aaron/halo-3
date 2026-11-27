@@ -1,0 +1,13 @@
+--- hlsl/bump_mapping.fx
++++ hlsl/bump_mapping.fx
+@@ -8,7 +8,9 @@
+ PARAM(float4, bump_detail_mask_map_xform);
+ PARAM_SAMPLER_2D(bump_detail_masked_map);
+ PARAM(float4, bump_detail_masked_map_xform);
+-PARAM(float, bump_detail_coefficient);
++// xbox: the retail (2007) shaders add the detail bump unscaled; no retail tag or shader constant table has
++// bump_detail_coefficient (an MCC parameter), so as a PARAM it would stay 0 and drop every detail bump map
++static const float bump_detail_coefficient = 1.0f;
+ PARAM(float, bump_detail_masked_coefficient);
+ 
+ #if defined(pc) && (DX_VERSION == 9)

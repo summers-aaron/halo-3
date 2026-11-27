@@ -1,0 +1,7 @@
+#ifndef NETWORKING_DELIVERY_NETWORK_OBSERVER_GLOBALS_H
+#define NETWORKING_DELIVERY_NETWORK_OBSERVER_GLOBALS_H
+
+class c_network_observer;
+extern "C" c_network_observer *g_network_observer;
+
+#endif // NETWORKING_DELIVERY_NETWORK_OBSERVER_GLOBALS_H

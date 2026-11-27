@@ -1,0 +1,8 @@
+#ifndef INCLUDE_NETWORKING_MESSAGES_NETWORK_MESSAGES_SYNCHRONOUS_RESULTS_H
+#define INCLUDE_NETWORKING_MESSAGES_NETWORK_MESSAGES_SYNCHRONOUS_RESULTS_H
+
+class c_bitstream;
+
+extern "C" void network_message_synchronous_encode_game_results(c_bitstream *stream, long message_storage_size, const void *message_storage);
+
+#endif // INCLUDE_NETWORKING_MESSAGES_NETWORK_MESSAGES_SYNCHRONOUS_RESULTS_H

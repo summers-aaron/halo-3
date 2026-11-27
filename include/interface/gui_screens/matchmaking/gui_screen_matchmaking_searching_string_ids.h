@@ -1,0 +1,58 @@
+#ifndef INTERFACE_GUI_SCREENS_MATCHMAKING_GUI_SCREEN_MATCHMAKING_SEARCHING_STRING_IDS_H
+#define INTERFACE_GUI_SCREENS_MATCHMAKING_GUI_SCREEN_MATCHMAKING_SEARCHING_STRING_IDS_H
+
+// String ids the matchmaking searching screen names its widgets, lists and
+// status strings by; each is named after its string in the cache string table.
+enum e_matchmaking_searching_string_id
+{
+    _matchmaking_searching_string_title = 0x29d,
+    _matchmaking_searching_string_spinner = 0x10006,
+    _matchmaking_searching_string_status = 0x1002b,
+    _matchmaking_searching_string_progress = 0x1002d,
+    _matchmaking_searching_string_ping = 0x1003e,
+    _matchmaking_searching_string_pong = 0x1003f,
+    _matchmaking_searching_string_search_online = 0x1005f,
+    _matchmaking_searching_string_search_online_stats = 0x10060,
+    _matchmaking_searching_string_search_setting_up_match = 0x10061,
+    _matchmaking_searching_string_player_select = 0x100af,
+    _matchmaking_searching_string_carnage_report = 0x100b9,
+    _matchmaking_searching_string_postgame_stats = 0x102be,
+    _matchmaking_searching_string_error_no_map_selected = 0x102c9,
+    _matchmaking_searching_string_party_leader = 0x1033f,
+    _matchmaking_searching_string_party_leader_underline = 0x10340,
+    _matchmaking_searching_string_hopper_name = 0x10345,
+    _matchmaking_searching_string_roster = 0x103a7,
+    _matchmaking_searching_string_tips = 0x103e0,
+    _matchmaking_searching_string_tip_cycle_time = 0x103e1,
+    _matchmaking_searching_string_search_preference = 0x103e2,
+    _matchmaking_searching_string_search_preference_skill = 0x103e7,
+    _matchmaking_searching_string_search_preference_connection = 0x103e9,
+    _matchmaking_searching_string_search_preference_language = 0x103eb,
+    _matchmaking_searching_string_roster_status_need_more = 0x103ed,
+    _matchmaking_searching_string_roster_status_have_enough = 0x103ee,
+    _matchmaking_searching_string_title_searching_for_match = 0x103ef,
+    _matchmaking_searching_string_title_players_found = 0x103f0,
+    _matchmaking_searching_string_title_game_setup = 0x103f1,
+    _matchmaking_searching_string_search_stage = 0x103f2,
+    _matchmaking_searching_string_status_search_stage = 0x103f3,
+    _matchmaking_searching_string_status_search_stage_ideal = 0x103f4,
+    _matchmaking_searching_string_status_search_stage_close_skill = 0x103f5,
+    _matchmaking_searching_string_status_search_stage_for_any = 0x103f6,
+    _matchmaking_searching_string_status_search_stage_desperation = 0x103f7,
+    _matchmaking_searching_string_status_search_stage_waiting_for_more_players = 0x103f8,
+    _matchmaking_searching_string_status_search_stage_setting_up_match = 0x103f9,
+    _matchmaking_searching_string_status_searching_target_ranked_any = 0x103fa,
+    _matchmaking_searching_string_status_searching_target_ranked_party = 0x103fb,
+    _matchmaking_searching_string_status_searching_target_ranked_mixed = 0x103fc,
+    _matchmaking_searching_string_status_searching_target_unranked_any = 0x103fd,
+    _matchmaking_searching_string_status_searching_target_unranked_party = 0x103fe,
+    _matchmaking_searching_string_status_assembling_summary_ranked_any = 0x103ff,
+    _matchmaking_searching_string_status_assembling_summary_ranked_party = 0x10400,
+    _matchmaking_searching_string_status_assembling_summary_ranked_mixed = 0x10401,
+    _matchmaking_searching_string_status_assembling_summary_unranked_any = 0x10402,
+    _matchmaking_searching_string_status_assembling_summary_unranked_party = 0x10403,
+    _matchmaking_searching_string_status_setting_up_match = 0x10404,
+    _matchmaking_searching_string_hopper_with_population = 0x10425,
+};
+
+#endif // INTERFACE_GUI_SCREENS_MATCHMAKING_GUI_SCREEN_MATCHMAKING_SEARCHING_STRING_IDS_H

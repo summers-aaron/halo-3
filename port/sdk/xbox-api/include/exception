@@ -1,0 +1,152 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// exception: std::exception and its allocation / bad-exception children, in the library's no-exceptions model
+// (raising calls the registered raise handler, then the class hook _Doraise, then std::_Throw).
+#pragma once
+#ifndef _EXCEPTION_
+#define _EXCEPTION_
+#include <xstddef>
+
+#pragma pack(push, _CRT_PACKING)
+
+#if _HAS_EXCEPTIONS
+#error "clean-room <exception>: only the no-exceptions library model (_HAS_EXCEPTIONS 0) is provided"
+#endif
+
+_STD_BEGIN
+
+#define _USE_EX \
+    using ::set_terminate; using ::terminate_handler; using ::terminate; \
+    using ::set_unexpected; using ::unexpected_handler; using ::unexpected;
+
+class exception;
+typedef void(__cdecl *_Prhand)(const exception &);
+
+extern _CRTIMP2 _Prhand _Raise_handler;
+_CRTIMP2_NCEEPURE void __CLRCALL_PURE_OR_CDECL _Throw(const exception &);
+
+class _CRTIMP2 exception
+{
+public:
+    static _Prhand _Set_raise_handler(_Prhand handler)
+    {
+        const _Prhand previous = _Raise_handler;
+        _Raise_handler = handler;
+        return previous;
+    }
+
+    explicit __CLR_OR_THIS_CALL exception(const char *message = _MESG("unknown"), int = 1) _THROW0()
+        : _Ptr(message)
+    {
+    }
+
+    __CLR_OR_THIS_CALL exception(const exception &other) _THROW0()
+        : _Ptr(other._Ptr)
+    {
+    }
+
+    exception &__CLR_OR_THIS_CALL operator=(const exception &other) _THROW0()
+    {
+        _Ptr = other._Ptr;
+        return *this;
+    }
+
+    virtual __CLR_OR_THIS_CALL ~exception()
+    {
+    }
+
+    virtual const char *__CLR_OR_THIS_CALL what() const _THROW0()
+    {
+        return _Ptr;
+    }
+
+    void __CLR_OR_THIS_CALL _Raise() const
+    {
+        if (_Raise_handler != 0)
+            (*_Raise_handler)(*this);
+        _Doraise();
+        _RAISE(*this);
+    }
+
+protected:
+    virtual void __CLR_OR_THIS_CALL _Doraise() const
+    {
+    }
+
+    const char *_Ptr;
+};
+
+typedef void(__cdecl *terminate_handler)();
+typedef void(__cdecl *unexpected_handler)();
+
+// Termination handlers have nothing to do without exceptions.
+inline terminate_handler __CRTDECL set_terminate(terminate_handler) _THROW0()
+{
+    return 0;
+}
+
+inline unexpected_handler __CRTDECL set_unexpected(unexpected_handler) _THROW0()
+{
+    return 0;
+}
+
+inline void __CRTDECL terminate()
+{
+}
+
+inline void __CRTDECL unexpected()
+{
+}
+
+_CRTIMP2 bool __cdecl uncaught_exception();
+
+class bad_exception : public exception
+{
+public:
+    __CLR_OR_THIS_CALL bad_exception(const char *message = _MESG("bad exception")) _THROW0()
+        : exception(message)
+    {
+    }
+
+    virtual __CLR_OR_THIS_CALL ~bad_exception() _THROW0()
+    {
+    }
+
+protected:
+    virtual void __CLR_OR_THIS_CALL _Doraise() const
+    {
+        _RAISE(*this);
+    }
+};
+
+static const char *_bad_alloc_Message = _MESG("bad allocation");
+
+class bad_alloc : public exception
+{
+public:
+    __CLR_OR_THIS_CALL bad_alloc(const char *message) _THROW0()
+        : exception(message)
+    {
+    }
+
+    // The default message is a static string: nothing is allocated to report an allocation failure.
+    __CLR_OR_THIS_CALL bad_alloc() _THROW0()
+        : exception(_bad_alloc_Message, 1)
+    {
+    }
+
+    virtual __CLR_OR_THIS_CALL ~bad_alloc() _THROW0()
+    {
+    }
+
+protected:
+    virtual void __CLR_OR_THIS_CALL _Doraise() const
+    {
+        _RAISE(*this);
+    }
+};
+
+_STD_END
+
+#pragma pack(pop)
+
+#endif // _EXCEPTION_

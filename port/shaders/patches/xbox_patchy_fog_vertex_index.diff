@@ -1,0 +1,37 @@
+--- hlsl/patchy_fog.hlsl
++++ hlsl/patchy_fog.hlsl
+@@ -18,9 +18,8 @@
+ struct s_vertex_in
+ {
+ 	float4 position : POSITION0;
+-#ifdef pc
+-	float2 texcoord : TEXCOORD0;
+-#endif // pc
++	// the Xbox patchy_fog vertex is one float4 (render_patchy_fog: DrawPrimitiveUP of 4 x 16 bytes); the corner comes
++	// from the vertex index on PC too (MCC's PC vertex carried a TEXCOORD0 the retail data does not have)
+ };
+ 
+ struct s_vertex_out
+@@ -32,9 +31,7 @@
+ 
+ s_vertex_out default_vs(
+ 	s_vertex_in vertex_in
+-#ifndef pc
+-	, int vertex_index : SV_VertexID
+-#endif // pc
++	, uint vertex_index : SV_VertexID
+ 	)
+ {
+ 	s_vertex_out vertex_out;
+@@ -44,11 +41,7 @@
+ 	vertex_out.position= mul(vertex_in.position, View_Projection);
+ 	vertex_out.world_space= vertex_in.position;
+ 	vertex_out.world_space/= vertex_out.world_space.w;
+-#ifndef pc	
+ 	vertex_out.texcoord.xy= predefined_texcoords[vertex_index % 4];
+-#else
+-	vertex_out.texcoord.xy= vertex_in.texcoord;
+-#endif
+ 	vertex_out.texcoord.z = vertex_out.position.w;
+ 	
+ 	return vertex_out;

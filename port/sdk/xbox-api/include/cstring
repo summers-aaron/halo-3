@@ -1,0 +1,23 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// cstring: <string.h> for C++, with the standard string and memory functions also visible in std.
+#pragma once
+#ifndef _CSTRING_
+#define _CSTRING_
+#include <yvals.h>
+#ifdef _STD_USING
+#undef _STD_USING
+#include <string.h>
+#define _STD_USING
+#else
+#include <string.h>
+#if _GLOBAL_USING
+_STD_BEGIN
+using ::size_t;
+using ::memchr; using ::memcmp; using ::memcpy; using ::memmove; using ::memset;
+using ::strcat; using ::strchr; using ::strcmp; using ::strcoll; using ::strcpy; using ::strcspn; using ::strerror;
+using ::strlen; using ::strncat; using ::strncmp; using ::strncpy; using ::strpbrk; using ::strrchr; using ::strspn;
+using ::strstr; using ::strtok; using ::strxfrm;
+_STD_END
+#endif
+#endif
+#endif // _CSTRING_

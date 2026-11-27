@@ -1,0 +1,19 @@
+--- hlsl/cortana.fx
++++ hlsl/cortana.fx
+@@ -337,11 +337,14 @@
+ 	
+ 	float4 vertex_transparency= 1.0f;
+ 	float2 vt_texcoord= transform_texcoord(vsout.position.xy, fade_noise_map_xform);
+-#ifndef pc
++#ifdef pc
++	// xbox: the retail vertex shader fetches the fade noise per vertex (point sampled, level 0)
++	vertex_transparency= sample2Dlod(fade_noise_map, vt_texcoord, 0);
++#else
+ 	asm {
+ 		tfetch2D vertex_transparency, vt_texcoord, fade_noise_map, MagFilter= point, MinFilter= point, MipFilter= point, AnisoFilter= disabled, UseComputedLOD= false
+ 	};
+-#endif // !pc
++#endif // pc
+ 	vsout.inscatter.w= fade_offset + (vertex_transparency.r * (2 * noise_amount) - noise_amount);
+ 
+ 	vsout.clip_distance = dot(vsout.position, v_clip_plane);

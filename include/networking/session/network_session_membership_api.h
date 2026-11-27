@@ -1,0 +1,9 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_MEMBERSHIP_API_H
+#define NETWORKING_SESSION_NETWORK_SESSION_MEMBERSHIP_API_H
+
+class c_network_session_membership;
+
+extern "C" long network_session_membership_get_common_determinism_version(const c_network_session_membership *membership);
+extern "C" bool network_session_membership_is_synchronized(const c_network_session_membership *membership);
+
+#endif

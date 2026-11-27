@@ -1,0 +1,8 @@
+#ifndef NETWORKING_LOGIC_STORAGE_NETWORK_STORAGE_MANIFEST_INTERNALS_H
+#define NETWORKING_LOGIC_STORAGE_NETWORK_STORAGE_MANIFEST_INTERNALS_H
+
+#include "networking/logic/storage/network_storage_manifest.h"
+
+extern "C" long g_network_storage_manifest_last_version;
+
+#endif // NETWORKING_LOGIC_STORAGE_NETWORK_STORAGE_MANIFEST_INTERNALS_H

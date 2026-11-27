@@ -1,0 +1,7 @@
+#ifndef SIMULATION_GAME_INTERFACE_SIMULATION_GAME_ENGINE_SANDBOX_H
+#define SIMULATION_GAME_INTERFACE_SIMULATION_GAME_ENGINE_SANDBOX_H
+
+#include "simulation/game_interface/simulation_game_map_variant.h"
+#include "simulation/simulation_game_entity_definitions.h"
+
+#endif // SIMULATION_GAME_INTERFACE_SIMULATION_GAME_ENGINE_SANDBOX_H

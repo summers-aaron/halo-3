@@ -1,0 +1,10 @@
+#ifndef PHYSICS_COLLISION_INSTANCED_GEOMETRY_DEFINITIONS_H
+#define PHYSICS_COLLISION_INSTANCED_GEOMETRY_DEFINITIONS_H
+
+// Functions defined in tu/blamlibxbox/collision_instanced_geometry_definitions.cpp that other units call.
+
+struct s_collision_instanced_geometry_definition;
+
+void collision_instanced_geometry_definition_fixup(s_collision_instanced_geometry_definition *definition, long structure_bsp_index, long instance_index);
+
+#endif // PHYSICS_COLLISION_INSTANCED_GEOMETRY_DEFINITIONS_H

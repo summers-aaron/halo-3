@@ -1,0 +1,95 @@
+--- hlsl/decorators.hlsl
++++ hlsl/decorators.hlsl
+@@ -179,7 +179,7 @@
+ 	
+ #ifdef pc
+    // convert fron unsigned to signed PC doesn't supoort BYTE4N format
+-   instance_quaternion = instance_quaternion * 2 - 1;
++   // port: retail BYTE4N data, read SNORM (already signed): instance_quaternion = instance_quaternion * 2 - 1;
+ //   instance_color = 1;
+    
+ #else	
+--- hlsl/entry_points.fx
++++ hlsl/entry_points.fx
+@@ -672,11 +672,11 @@
+ #ifdef pc	
+    // on PC vertex lightnap is stored in unsigned format
+    // convert to signed
+-   light_intensity = 2 * light_intensity - 1;
+-	c0_3_rgbe = 2 * c0_3_rgbe - 1;
+-	c1_1_rgbe = 2 * c1_1_rgbe - 1;
+-	c1_2_rgbe = 2 * c1_2_rgbe - 1;
+-	c1_3_rgbe = 2 * c1_3_rgbe - 1;
++   // port: retail BYTE4N data, read SNORM (already signed): light_intensity = 2 * light_intensity - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c0_3_rgbe = 2 * c0_3_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_1_rgbe = 2 * c1_1_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_2_rgbe = 2 * c1_2_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_3_rgbe = 2 * c1_3_rgbe - 1;
+ #endif
+ 
+ 	// output to pixel shader
+@@ -1020,7 +1020,7 @@
+ 	
+ #ifdef pc	
+    // on PC vertex linear PRT data is stored in unsigned format convert to signed
+-	prt_c0_c3 = 2 * prt_c0_c3 - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): prt_c0_c3 = 2 * prt_c0_c3 - 1;
+ #endif
+ 	
+ 	// convert to monochrome	
+--- hlsl/foliage.fx
++++ hlsl/foliage.fx
+@@ -364,11 +364,11 @@
+ #ifdef pc	
+    // on PC vertex lightnap is stored in unsigned format
+    // convert to signed
+-   light_intensity = 2 * light_intensity - 1;
+-	c0_3_rgbe = 2 * c0_3_rgbe - 1;
+-	c1_1_rgbe = 2 * c1_1_rgbe - 1;
+-	c1_2_rgbe = 2 * c1_2_rgbe - 1;
+-	c1_3_rgbe = 2 * c1_3_rgbe - 1;
++   // port: retail BYTE4N data, read SNORM (already signed): light_intensity = 2 * light_intensity - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c0_3_rgbe = 2 * c0_3_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_1_rgbe = 2 * c1_1_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_2_rgbe = 2 * c1_2_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_3_rgbe = 2 * c1_3_rgbe - 1;
+ #endif
+ 
+ 	// output to pixel shader
+@@ -497,7 +497,7 @@
+ 
+ #ifdef pc	
+    // on PC vertex linear PRT data is stored in unsigned format convert to signed
+-	prt_c0_c3 = 2 * prt_c0_c3 - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): prt_c0_c3 = 2 * prt_c0_c3 - 1;
+ #endif
+ 
+ 	float4 prt_c0_c3_monochrome= prt_c0_c3;
+--- hlsl/terrain_new.fx
++++ hlsl/terrain_new.fx
+@@ -1080,11 +1080,11 @@
+ {
+    // on PC vertex lightnap is stored in unsigned format
+    // convert to signed
+-   light_intensity = 2 * light_intensity - 1;
+-	c0_3_rgbe = 2 * c0_3_rgbe - 1;
+-	c1_1_rgbe = 2 * c1_1_rgbe - 1;
+-	c1_2_rgbe = 2 * c1_2_rgbe - 1;
+-	c1_3_rgbe = 2 * c1_3_rgbe - 1;
++   // port: retail BYTE4N data, read SNORM (already signed): light_intensity = 2 * light_intensity - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c0_3_rgbe = 2 * c0_3_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_1_rgbe = 2 * c1_1_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_2_rgbe = 2 * c1_2_rgbe - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): c1_3_rgbe = 2 * c1_3_rgbe - 1;
+ 
+ 	float4 local_to_world_transform_UNUSED[3];
+ 	float4 normal4 = float4(normal.xyz,1);
+@@ -1325,7 +1325,7 @@
+ 	default_vertex_transform_vs(vertex, position, texcoord, normal4, binormal, tangent, fragment_to_camera_world, local_to_world_transform);
+ 	normal = normal4.xyz;
+    // on PC vertex linear PRT data is stored in unsigned format convert to signed
+-	prt_c0_c3 = 2 * prt_c0_c3 - 1;
++	// port: retail BYTE4N data, read SNORM (already signed): prt_c0_c3 = 2 * prt_c0_c3 - 1;
+ 
+ 	{	
+ 		// new monochrome PRT/RAVI ratio calculation

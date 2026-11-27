@@ -1,0 +1,8 @@
+#ifndef GAME_TAG_RESOURCE_CACHE_ADDRESS_ELEMENT_TYPES_H
+#define GAME_TAG_RESOURCE_CACHE_ADDRESS_ELEMENT_TYPES_H
+
+struct s_tag_resource_cache_address_element {
+    long values[8];
+};
+
+#endif // GAME_TAG_RESOURCE_CACHE_ADDRESS_ELEMENT_TYPES_H

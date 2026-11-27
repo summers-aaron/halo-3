@@ -1,0 +1,16 @@
+--- hlsl/pixel_copy.hlsl
++++ hlsl/pixel_copy.hlsl
+@@ -11,5 +11,12 @@
+ float4 default_ps(screen_output IN) : SV_Target	// DXC: one SV_Position per input signature
+ {
+ 	float4 vpos= IN.position;
+- 	return sample2D(source_sampler, IN.texcoord * ps_postprocess_scale.xy);
++	// port: the Xbox shader has no constants: it wraps the pixel position at 8x8 and fetches that texel unnormalized
++	// with point filtering (the stipple pattern, rasterizer_stipple_initialize: default texture 9 into surface 8).
++	// MCC PC scaled IN.texcoord by a ps_postprocess_scale the game never sets on the Xbox (0: one texel everywhere).
++	// The game sets clamp addressing: a source smaller than 8x8 repeats its last texel.
++	uint2 source_size;
++	source_sampler.t.GetDimensions(source_size.x, source_size.y);
++	uint2 pixel= uint2(vpos.xy) % 8;
++	return source_sampler.t.Load(int3(min(pixel, source_size - 1), 0));
+ }

@@ -1,0 +1,8 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// climits: <limits.h> for C++.
+#pragma once
+#ifndef _CLIMITS_
+#define _CLIMITS_
+#include <yvals.h>
+#include <limits.h>
+#endif // _CLIMITS_

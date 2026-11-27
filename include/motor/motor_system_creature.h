@@ -1,0 +1,13 @@
+#ifndef MOTOR_MOTOR_SYSTEM_CREATURE_H
+#define MOTOR_MOTOR_SYSTEM_CREATURE_H
+
+// Functions defined in tu/objectslibxbox/motor_system_creature.cpp that other units call.
+
+struct s_character_physics_move_output_datum;
+struct s_character_physics_update_input_datum;
+struct s_character_physics_update_output_datum;
+
+bool motor_system_creature_physics_update(long object_index, s_character_physics_update_input_datum *input, s_character_physics_update_output_datum *output);
+bool motor_system_creature_move(long object_index,s_character_physics_move_output_datum *character_physics_move_output_datum);
+
+#endif // MOTOR_MOTOR_SYSTEM_CREATURE_H

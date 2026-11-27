@@ -1,0 +1,7 @@
+#ifndef MEMORY_SHARED_RESOURCE_ALLOCATOR_H
+#define MEMORY_SHARED_RESOURCE_ALLOCATOR_H
+
+extern "C" {
+}
+
+#endif

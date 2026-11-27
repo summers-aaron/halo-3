@@ -1,0 +1,9 @@
+#ifndef INCLUDE_SIMULATION_GAME_INTERFACE_SIMULATION_OBJECT_INTERPOLATION_H
+#define INCLUDE_SIMULATION_GAME_INTERFACE_SIMULATION_OBJECT_INTERPOLATION_H
+
+struct s_simulation_object_interpolation_data;
+
+extern "C" unsigned char simulation_object_get_interpolation_data(long object_index, s_simulation_object_interpolation_data *out);
+extern "C" void simulation_object_set_interpolation_data(long object_index, const s_simulation_object_interpolation_data *interpolation_data);
+
+#endif // INCLUDE_SIMULATION_GAME_INTERFACE_SIMULATION_OBJECT_INTERPOLATION_H

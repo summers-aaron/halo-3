@@ -1,0 +1,6 @@
+#ifndef GAME_PLAYER_CONTROL_DIRECTOR_TYPES_H
+#define GAME_PLAYER_CONTROL_DIRECTOR_TYPES_H
+
+#include "camera/director_globals_types.h"
+
+#endif // GAME_PLAYER_CONTROL_DIRECTOR_TYPES_H

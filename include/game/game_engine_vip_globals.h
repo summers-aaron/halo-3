@@ -1,0 +1,7 @@
+#ifndef GAME_GAME_ENGINE_VIP_GLOBALS_H
+#define GAME_GAME_ENGINE_VIP_GLOBALS_H
+
+class c_game_engine_vip_variant;
+extern c_game_engine_vip_variant *g_game_engine_vip_variant;
+
+#endif

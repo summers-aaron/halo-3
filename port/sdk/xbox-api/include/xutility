@@ -1,0 +1,383 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// xutility: iterator tags and traits, the checked-iterator plumbing (_Checked_base / _Checked_cat /
+// _Checked_assign_from_base and their macros), the debug-check macros, and std::fill / std::equal / std::mismatch.
+#pragma once
+#ifndef _XUTILITY_
+#define _XUTILITY_
+#include <climits>
+#include <utility>
+#include <crtdbg.h>
+
+#pragma pack(push, _CRT_PACKING)
+
+_STD_BEGIN
+
+// Checked-iterator category of an iterator, and whether its "base" (unchecked) form is a different type.
+struct _Unchecked_iterator_tag
+{
+};
+struct _Range_checked_iterator_tag
+{
+};
+struct _Unchanged_checked_iterator_base_type_tag
+{
+};
+struct _Different_checked_iterator_base_type_tag
+{
+};
+struct _Undefined_inner_type_tag
+{
+};
+struct _Undefined_move_tag
+{
+};
+struct _Swap_move_tag
+{
+};
+
+#define _IGNORE_MYCONT ((const _Container_base *)-2)
+
+#if _HAS_ITERATOR_DEBUGGING
+#error "clean-room <xutility>: iterator debugging (_HAS_ITERATOR_DEBUGGING) is not provided"
+#endif
+
+// Release library: comparisons are plain, the range / order / pointer checks vanish.
+#define _DEBUG_LT(x, y) ((x) < (y))
+#define _DEBUG_LT_PRED(pred, x, y) pred(x, y)
+#define _DEBUG_ORDER(first, last)
+#define _DEBUG_ORDER_PRED(first, last, pred)
+#define _DEBUG_ORDER_SINGLE(first, last, is_first_iteration)
+#define _DEBUG_ORDER_SINGLE_PRED(first, last, pred, is_first_iteration)
+#define _DEBUG_POINTER(first)
+#define _DEBUG_POINTER2(first, file, line)
+#define _DEBUG_RANGE(first, last)
+#define _DEBUG_RANGE2(first, last, file, line)
+
+// Containers keep no iterator list in a release build; iterators remember their container for the range checks.
+struct _Container_base
+{
+};
+
+struct _Iterator_base
+{
+    typedef _Unchecked_iterator_tag _Checked_iterator_category;
+    typedef _Unchanged_checked_iterator_base_type_tag _Checked_iterator_base_type;
+    typedef _Undefined_inner_type_tag _Inner_type;
+
+    __CLR_OR_THIS_CALL _Iterator_base()
+        : _Mycont(0)
+    {
+    }
+
+    const _Container_base *_Mycont;
+};
+typedef _Iterator_base _Iterator_base_secure;
+
+struct input_iterator_tag
+{
+};
+struct output_iterator_tag
+{
+};
+struct forward_iterator_tag : public input_iterator_tag
+{
+};
+struct bidirectional_iterator_tag : public forward_iterator_tag
+{
+};
+struct random_access_iterator_tag : public bidirectional_iterator_tag
+{
+};
+struct _Int_iterator_tag
+{
+};
+struct _Float_iterator_tag
+{
+};
+struct _Nonscalar_ptr_iterator_tag
+{
+};
+struct _Scalar_ptr_iterator_tag
+{
+};
+
+template<class _Category, class _Ty, class _Diff = ptrdiff_t, class _Pointer = _Ty *, class _Reference = _Ty &>
+struct iterator : public _Iterator_base
+{
+    typedef _Category iterator_category;
+    typedef _Ty value_type;
+    typedef _Diff difference_type;
+    typedef _Diff distance_type;
+    typedef _Pointer pointer;
+    typedef _Reference reference;
+};
+
+template<class _Iter> struct iterator_traits
+{
+    typedef typename _Iter::iterator_category iterator_category;
+    typedef typename _Iter::value_type value_type;
+    typedef typename _Iter::difference_type difference_type;
+    typedef difference_type distance_type;
+    typedef typename _Iter::pointer pointer;
+    typedef typename _Iter::reference reference;
+};
+
+template<class _Ty> struct iterator_traits<_Ty *>
+{
+    typedef random_access_iterator_tag iterator_category;
+    typedef _Ty value_type;
+    typedef ptrdiff_t difference_type;
+    typedef ptrdiff_t distance_type;
+    typedef _Ty *pointer;
+    typedef _Ty &reference;
+};
+
+template<class _Ty> struct iterator_traits<const _Ty *>
+{
+    typedef random_access_iterator_tag iterator_category;
+    typedef _Ty value_type;
+    typedef ptrdiff_t difference_type;
+    typedef ptrdiff_t distance_type;
+    typedef const _Ty *pointer;
+    typedef const _Ty &reference;
+};
+
+template<class _Iter> inline typename iterator_traits<_Iter>::iterator_category __CLRCALL_OR_CDECL _Iter_cat(const _Iter &)
+{
+    typename iterator_traits<_Iter>::iterator_category category;
+    return category;
+}
+
+// Random access only when both iterators are; otherwise the forward algorithms apply.
+template<class _Cat1, class _Cat2> class _Iter_random_helper
+{
+public:
+    typedef forward_iterator_tag _Iter_random_cat;
+};
+
+template<> class _Iter_random_helper<random_access_iterator_tag, random_access_iterator_tag>
+{
+public:
+    typedef random_access_iterator_tag _Iter_random_cat;
+};
+
+template<class _Iter1, class _Iter2> inline typename _Iter_random_helper<typename iterator_traits<_Iter1>::iterator_category,
+    typename iterator_traits<_Iter2>::iterator_category>::_Iter_random_cat __CLRCALL_OR_CDECL
+_Iter_random(const _Iter1 &, const _Iter2 &)
+{
+    typename _Iter_random_helper<typename iterator_traits<_Iter1>::iterator_category,
+        typename iterator_traits<_Iter2>::iterator_category>::_Iter_random_cat category;
+    return category;
+}
+
+// Library iterators (derived from _Iterator_base) state their checked category and base type; any other iterator
+// (a pointer, a user class) is unchecked and is its own base.
+template<class _Iter, bool _Library = __is_base_of(_Iterator_base, _Iter)> class _Checked_iterator_category
+{
+public:
+    typedef _Unchecked_iterator_tag _Checked_cat;
+};
+
+template<class _Iter> class _Checked_iterator_category<_Iter, true>
+{
+public:
+    typedef typename _Iter::_Checked_iterator_category _Checked_cat;
+};
+
+template<class _Iter> inline typename _Checked_iterator_category<_Iter>::_Checked_cat _Checked_cat(const _Iter &)
+{
+    typename _Checked_iterator_category<_Iter>::_Checked_cat category;
+    return category;
+}
+
+template<class _Iter, class _Stated_base> class _Checked_iterator_base_select
+{
+public:
+    typedef _Different_checked_iterator_base_type_tag _Base_type_tag;
+    typedef _Stated_base _Checked_iterator_base_type;
+};
+
+template<class _Iter> class _Checked_iterator_base_select<_Iter, _Unchanged_checked_iterator_base_type_tag>
+{
+public:
+    typedef _Unchanged_checked_iterator_base_type_tag _Base_type_tag;
+    typedef _Iter _Checked_iterator_base_type;
+};
+
+template<class _Iter, bool _Library = __is_base_of(_Iterator_base, _Iter)> class _Checked_iterator_base_helper
+{
+public:
+    typedef _Unchanged_checked_iterator_base_type_tag _Checked_iterator_base_type_tag;
+    typedef _Iter _Checked_iterator_base_type;
+};
+
+template<class _Iter> class _Checked_iterator_base_helper<_Iter, true>
+{
+    typedef _Checked_iterator_base_select<_Iter, typename _Iter::_Checked_iterator_base_type> _Select;
+
+public:
+    typedef typename _Select::_Base_type_tag _Checked_iterator_base_type_tag;
+    typedef typename _Select::_Checked_iterator_base_type _Checked_iterator_base_type;
+};
+
+template<class _Iter> inline typename _Checked_iterator_base_helper<_Iter>::_Checked_iterator_base_type __CLRCALL_OR_CDECL
+_Checked_base(const _Iter &it, _Different_checked_iterator_base_type_tag)
+{
+    return it._Checked_iterator_base();
+}
+
+template<class _Iter> inline typename _Checked_iterator_base_helper<_Iter>::_Checked_iterator_base_type __CLRCALL_OR_CDECL
+_Checked_base(const _Iter &it, _Unchanged_checked_iterator_base_type_tag)
+{
+    return it;
+}
+
+template<class _Iter> inline typename _Checked_iterator_base_helper<_Iter>::_Checked_iterator_base_type __CLRCALL_OR_CDECL
+_Checked_base(const _Iter &it)
+{
+    typename _Checked_iterator_base_helper<_Iter>::_Checked_iterator_base_type_tag tag;
+    return _Checked_base(it, tag);
+}
+
+// Store a base iterator back into its checked iterator (plain assignment when the types agree).
+template<class _DstIter, class _BaseIter> inline void __CLRCALL_OR_CDECL _Checked_assign_from_base(_DstIter &dst, const _BaseIter &src)
+{
+    dst._Checked_iterator_assign_from_base(src);
+}
+
+template<class _Iter> inline void __CLRCALL_OR_CDECL _Checked_assign_from_base(_Iter &dst, const _Iter &src)
+{
+    dst = src;
+}
+
+#if _SECURE_SCL
+#define _CHECKED_CAT(_Iter) _STD _Checked_cat(_Iter)
+#define _CHECKED_BASE(_Iter) _STD _Checked_base(_Iter)
+#define _CHECKED_BASE_TYPE(_Iter_type) typename _STD _Checked_iterator_base_helper<_Iter_type>::_Checked_iterator_base_type
+#define _ASSIGN_FROM_BASE(_Dest, _Src) _STD _Checked_assign_from_base(_Dest, _Src)
+#else
+#define _CHECKED_CAT(_Iter) _STD _Range_checked_iterator_tag()
+#define _CHECKED_BASE(_Iter) _Iter
+#define _CHECKED_BASE_TYPE(_Iter_type) _Iter_type
+#define _ASSIGN_FROM_BASE(_Dest, _Src) _Dest = (_Src)
+#endif
+
+// mismatch: first position where [first1, last1) and [first2, ...) differ.
+template<class _InIt1, class _InIt2, class _InItCats> inline pair<_InIt1, _InIt2> __CLRCALL_OR_CDECL
+_Mismatch(_InIt1 first1, _InIt1 last1, _InIt2 first2, _InItCats, _Range_checked_iterator_tag)
+{
+    while (first1 != last1 && *first1 == *first2)
+        ++first1, ++first2;
+    return pair<_InIt1, _InIt2>(first1, first2);
+}
+
+#if _SECURE_SCL
+template<class _InIt1, class _InIt2> inline pair<_InIt1, _InIt2> __CLRCALL_OR_CDECL
+_Mismatch(_InIt1 first1, _InIt1 last1, _InIt2 first2, random_access_iterator_tag, _Range_checked_iterator_tag)
+{
+    // a checked second range is advanced over the whole length first (that is its range check)
+    _InIt2 last2 = first2 + (last1 - first1);
+    (void)last2;
+    pair<_InIt1, _CHECKED_BASE_TYPE(_InIt2)> result =
+        _Mismatch(first1, last1, _CHECKED_BASE(first2), forward_iterator_tag(), _Range_checked_iterator_tag());
+    _ASSIGN_FROM_BASE(first2, result.second);
+    return pair<_InIt1, _InIt2>(result.first, first2);
+}
+
+template<class _InIt1, class _InIt2, class _InItCats> inline pair<_InIt1, _InIt2> __CLRCALL_OR_CDECL
+_Mismatch(_InIt1 first1, _InIt1 last1, _InIt2 first2, _InItCats categories, _Unchecked_iterator_tag)
+{
+    return _Mismatch(first1, last1, first2, categories, _Range_checked_iterator_tag());
+}
+#endif
+
+template<class _InIt1, class _InIt2> inline pair<_InIt1, _InIt2> __CLRCALL_OR_CDECL mismatch(_InIt1 first1, _InIt1 last1, _InIt2 first2)
+{
+#if _SECURE_SCL
+    pair<_CHECKED_BASE_TYPE(_InIt1), _InIt2> result =
+        _Mismatch(_CHECKED_BASE(first1), _CHECKED_BASE(last1), first2, _Iter_random(first1, first2), _CHECKED_CAT(first2));
+    _ASSIGN_FROM_BASE(first1, result.first);
+    return pair<_InIt1, _InIt2>(first1, result.second);
+#else
+    return _Mismatch(first1, last1, first2, _Iter_random(first1, first2), _CHECKED_CAT(first2));
+#endif
+}
+
+// equal: [first1, last1) matches [first2, ...) element by element (byte arrays compare with memcmp).
+template<class _InIt1, class _InIt2, class _InItCats> inline bool __CLRCALL_OR_CDECL
+_Equal(_InIt1 first1, _InIt1 last1, _InIt2 first2, _InItCats, _Range_checked_iterator_tag)
+{
+    return _Mismatch(first1, last1, first2, forward_iterator_tag(), _Range_checked_iterator_tag()).first == last1;
+}
+
+inline bool __CLRCALL_OR_CDECL _Equal(const char *first1, const char *last1, const char *first2,
+    random_access_iterator_tag, _Range_checked_iterator_tag)
+{
+    return ::memcmp(first1, first2, last1 - first1) == 0;
+}
+
+inline bool __CLRCALL_OR_CDECL _Equal(const signed char *first1, const signed char *last1, const signed char *first2,
+    random_access_iterator_tag, _Range_checked_iterator_tag)
+{
+    return ::memcmp(first1, first2, last1 - first1) == 0;
+}
+
+inline bool __CLRCALL_OR_CDECL _Equal(const unsigned char *first1, const unsigned char *last1, const unsigned char *first2,
+    random_access_iterator_tag, _Range_checked_iterator_tag)
+{
+    return ::memcmp(first1, first2, last1 - first1) == 0;
+}
+
+#if _SECURE_SCL
+template<class _InIt1, class _InIt2> inline bool __CLRCALL_OR_CDECL
+_Equal(_InIt1 first1, _InIt1 last1, _InIt2 first2, random_access_iterator_tag, _Range_checked_iterator_tag)
+{
+    _InIt2 last2 = first2 + (last1 - first1);
+    (void)last2;
+    return _Equal(first1, last1, _CHECKED_BASE(first2), forward_iterator_tag(), _Range_checked_iterator_tag());
+}
+
+template<class _InIt1, class _InIt2, class _InItCats> inline bool __CLRCALL_OR_CDECL
+_Equal(_InIt1 first1, _InIt1 last1, _InIt2 first2, _InItCats categories, _Unchecked_iterator_tag)
+{
+    return _Equal(first1, last1, first2, categories, _Range_checked_iterator_tag());
+}
+#endif
+
+template<class _InIt1, class _InIt2> inline bool __CLRCALL_OR_CDECL equal(_InIt1 first1, _InIt1 last1, _InIt2 first2)
+{
+    return _Equal(_CHECKED_BASE(first1), _CHECKED_BASE(last1), first2, _Iter_random(first1, first2), _CHECKED_CAT(first2));
+}
+
+// fill: store value through [first, last) (byte arrays with memset).
+template<class _FwdIt, class _Ty> inline void __CLRCALL_OR_CDECL _Fill(_FwdIt first, _FwdIt last, const _Ty &value)
+{
+    for (; first != last; ++first)
+        *first = value;
+}
+
+inline void __CLRCALL_OR_CDECL _Fill(char *first, char *last, int value)
+{
+    ::memset(first, value, last - first);
+}
+
+inline void __CLRCALL_OR_CDECL _Fill(signed char *first, signed char *last, int value)
+{
+    ::memset(first, value, last - first);
+}
+
+inline void __CLRCALL_OR_CDECL _Fill(unsigned char *first, unsigned char *last, int value)
+{
+    ::memset(first, value, last - first);
+}
+
+template<class _FwdIt, class _Ty> inline void __CLRCALL_OR_CDECL fill(_FwdIt first, _FwdIt last, const _Ty &value)
+{
+    _Fill(_CHECKED_BASE(first), _CHECKED_BASE(last), value);
+}
+
+_STD_END
+
+#pragma pack(pop)
+
+#endif // _XUTILITY_

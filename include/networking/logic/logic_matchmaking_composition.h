@@ -1,0 +1,24 @@
+#ifndef NETWORKING_LOGIC_LOGIC_MATCHMAKING_COMPOSITION_H
+#define NETWORKING_LOGIC_LOGIC_MATCHMAKING_COMPOSITION_H
+
+// Functions defined in tu/networkinglibxbox/logic_matchmaking_composition.cpp.
+
+class c_network_session;
+struct s_network_session_matchmaking_composition;
+enum e_network_session_matchmaking_composition_build_result;
+
+e_network_session_matchmaking_composition_build_result network_session_build_matchmaking_composition(
+    const c_network_session *session, s_network_session_matchmaking_composition *composition);
+
+extern "C" int network_session_matchmaking_composition_session_state_valid(void);
+
+class c_network_session_membership;
+class c_hopper_configuration;
+
+extern "C" long network_session_matchmaking_composition_build_guest_statistics(
+    const c_network_session_membership *membership, const c_hopper_configuration *hopper, s_network_session_matchmaking_composition *composition);
+
+struct s_logic_matchmaking_composition_skill_limits;
+extern "C" const s_logic_matchmaking_composition_skill_limits k_matchmaking_skill_limits;
+
+#endif // NETWORKING_LOGIC_LOGIC_MATCHMAKING_COMPOSITION_H

@@ -1,0 +1,6 @@
+#ifndef RASTERIZER_RASTERIZER_HDR_TARGETS_H
+#define RASTERIZER_RASTERIZER_HDR_TARGETS_H
+
+void rasterizer_main_setup_hdr_render_targets(bool use_second_target, bool hdr_alpha_blend);
+
+#endif // RASTERIZER_RASTERIZER_HDR_TARGETS_H

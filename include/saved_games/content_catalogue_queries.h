@@ -1,0 +1,9 @@
+#ifndef SAVED_GAMES_CONTENT_CATALOGUE_QUERIES_H
+#define SAVED_GAMES_CONTENT_CATALOGUE_QUERIES_H
+
+class c_content_catalogue;
+enum e_game_content_type;
+
+e_game_content_type content_catalogue_get_game_content_type(c_content_catalogue *catalogue, long content_item_index);
+
+#endif

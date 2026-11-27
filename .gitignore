@@ -1,0 +1,10 @@
+/build-pc/
+/build/
+/tmp/
+/local/
+/disc/
+live_account*.json
+*.o
+*.obj
+*.pe
+*.log

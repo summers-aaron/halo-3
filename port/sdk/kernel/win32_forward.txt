@@ -1,0 +1,26 @@
+# Win32 calls the Xbox makes with the same meaning as on Windows: forwarded verbatim by generated thunks
+# (port/tools/stubgen forward). Name@bytes is the host's stdcall decoration. Path-taking file calls live in
+# win32_windows.c so they translate Xbox drive paths first.
+CreateEventA@16
+CreateIoCompletionPort@16
+CreateMutexA@12
+CreateSemaphoreA@16
+CreateThread@24
+FindNextFileA@8
+FlushFileBuffers@4
+GetCurrentThreadId@0
+GetExitCodeThread@8
+GetFileSize@8
+GetLocalTime@4
+GlobalMemoryStatus@4
+RaiseException@16
+ReleaseSemaphore@12
+ResetEvent@4
+SetEndOfFile@4
+SetEvent@4
+SetFilePointer@16
+SetLastError@4
+VirtualAlloc@16
+WaitForMultipleObjects@16
+WaitForSingleObject@8
+WaitForSingleObjectEx@12

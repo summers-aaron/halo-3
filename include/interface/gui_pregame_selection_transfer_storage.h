@@ -1,0 +1,5 @@
+#ifndef INTERFACE_GUI_PREGAME_SELECTION_TRANSFER_STORAGE_H
+#define INTERFACE_GUI_PREGAME_SELECTION_TRANSFER_STORAGE_H
+
+extern "C" char g_pregame_selection_file_transfer_storage[];
+#endif

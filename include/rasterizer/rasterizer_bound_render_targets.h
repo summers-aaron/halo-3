@@ -1,0 +1,6 @@
+#ifndef RASTERIZER_RASTERIZER_BOUND_RENDER_TARGETS_H
+#define RASTERIZER_RASTERIZER_BOUND_RENDER_TARGETS_H
+
+#include "rasterizer/rasterizer.h"
+
+#endif

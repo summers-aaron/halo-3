@@ -1,0 +1,9 @@
+#ifndef RASTERIZER_DX9_RASTERIZER_DYNAMIC_SCREEN_CALLS_H
+#define RASTERIZER_DX9_RASTERIZER_DYNAMIC_SCREEN_CALLS_H
+
+struct rasterizer_vertex_screen;
+struct rasterizer_dynamic_screen_geometry_parameters;
+
+extern "C" void rasterizer_draw_dynamic_screen_quad(const rasterizer_dynamic_screen_geometry_parameters *parameters, rasterizer_vertex_screen *vertices);
+
+#endif // RASTERIZER_DX9_RASTERIZER_DYNAMIC_SCREEN_CALLS_H

@@ -1,0 +1,7 @@
+#ifndef PHYSICS_HAVOK_UTILITIES_POSITION_ACCESS_H
+#define PHYSICS_HAVOK_UTILITIES_POSITION_ACCESS_H
+
+struct havok_utilities_position_component;
+short havok_utilities_get_object_position_body_index(havok_utilities_position_component *component);
+
+#endif

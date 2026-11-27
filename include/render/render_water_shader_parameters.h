@@ -1,0 +1,57 @@
+#ifndef RENDER_RENDER_WATER_SHADER_PARAMETERS_H
+#define RENDER_RENDER_WATER_SHADER_PARAMETERS_H
+
+// Pooled names used by the water shader parameter table.
+extern "C" {
+extern const char k_render_method_extern_name_none[];
+extern const char k_render_method_extern_name_texture_global_target_texaccum[];
+extern const char k_render_method_extern_name_texture_global_target_normal[];
+extern const char k_render_method_extern_name_texture_global_target_z[];
+extern const char k_render_method_extern_name_texture_global_target_shadow_buffer1[];
+extern const char k_render_method_extern_name_texture_global_target_shadow_buffer2[];
+extern const char k_render_method_extern_name_texture_global_target_shadow_buffer3[];
+extern const char k_render_method_extern_name_texture_global_target_shadow_buffer4[];
+extern const char k_render_method_extern_name_texture_global_target_texture_camera[];
+extern const char k_render_method_extern_name_texture_global_target_reflection[];
+extern const char k_render_method_extern_name_texture_global_target_refraction[];
+extern const char k_render_method_extern_name_texture_lightprobe_texture[];
+extern const char k_render_method_extern_name_texture_dominant_light_intensity_map[];
+extern const char k_render_method_extern_name_texture_unused1[];
+extern const char k_render_method_extern_name_texture_unused2[];
+extern const char k_render_method_extern_name_object_change_color_primary[];
+extern const char k_render_method_extern_name_object_change_color_secondary[];
+extern const char k_render_method_extern_name_object_change_color_tertiary[];
+extern const char k_render_method_extern_name_object_change_color_quaternary[];
+extern const char k_render_method_extern_name_object_emblem_color_background[];
+extern const char k_render_method_extern_name_object_emblem_color_primary[];
+extern const char k_render_method_extern_name_object_emblem_color_secondary[];
+extern const char k_render_method_extern_name_texture_dynamic_environment_map_0[];
+extern const char k_render_method_extern_name_texture_dynamic_environment_map_1[];
+extern const char k_render_method_extern_name_texture_cook_torrance_cc0236[];
+extern const char k_render_method_extern_name_texture_cook_torrance_dd0236[];
+extern const char k_render_method_extern_name_texture_cook_torrance_c78d78[];
+extern const char k_render_method_extern_name_light_dir_0[];
+extern const char k_render_method_extern_name_light_color_0[];
+extern const char k_render_method_extern_name_light_dir_1[];
+extern const char k_render_method_extern_name_light_color_1[];
+extern const char k_render_method_extern_name_light_dir_2[];
+extern const char k_render_method_extern_name_light_color_2[];
+extern const char k_render_method_extern_name_light_dir_3[];
+extern const char k_render_method_extern_name_light_color_3[];
+extern const char k_render_method_extern_name_texture_unused_3[];
+extern const char k_render_method_extern_name_texture_unused_4[];
+extern const char k_render_method_extern_name_texture_unused_5[];
+extern const char k_render_method_extern_name_texture_dynamic_light_gel_0[];
+extern const char k_render_method_extern_name_flat_envmap_matrix_x[];
+extern const char k_render_method_extern_name_flat_envmap_matrix_y[];
+extern const char k_render_method_extern_name_flat_envmap_matrix_z[];
+extern const char k_render_method_extern_name_debug_tint[];
+extern const char k_render_method_extern_name_screen_constants[];
+extern const char k_render_method_extern_name_active_camo_distortion_texture[];
+extern const char k_render_method_extern_name_scene_ldr_texture[];
+extern const char k_render_method_extern_name_scene_hdr_texture[];
+extern const char k_render_method_extern_name_water_memory_export_address[];
+extern const char k_render_method_extern_name_tree_animation_timer[];
+}
+
+#endif

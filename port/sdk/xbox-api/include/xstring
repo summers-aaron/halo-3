@@ -1,0 +1,361 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// xstring: std::basic_string (the part the game and port/sdk use: construction, assign, erase, size queries) on a
+// 16-element small buffer, and std::_String_base, whose static error reporters _Xlen / _Xran port/sdk defines.
+#pragma once
+#ifndef _XSTRING_
+#define _XSTRING_
+#include <xmemory>
+
+#pragma pack(push, _CRT_PACKING)
+
+_STD_BEGIN
+
+template<class _Elem, class _Traits = char_traits<_Elem>, class _Ax = allocator<_Elem> > class basic_string;
+
+// Holds the error reporters shared by every string type: _Xlen reports length_error, _Xran out_of_range.
+class _CRTIMP2_PURE _String_base : public _Container_base
+{
+public:
+    _MRTIMP2_NPURE_NCEEPURE static void __CLRCALL_PURE_OR_CDECL _Xlen();
+    _MRTIMP2_NPURE_NCEEPURE static void __CLRCALL_PURE_OR_CDECL _Xran();
+    _MRTIMP2_NPURE_NCEEPURE static void __CLRCALL_PURE_OR_CDECL _Xinvarg();
+};
+
+// Holds the (stateless) allocator, rebound to the element type.
+template<class _Ty, class _Alloc> class _String_val : public _String_base
+{
+protected:
+    typedef typename _Alloc::template rebind<_Ty>::other _Alty;
+
+    __CLR_OR_THIS_CALL _String_val(_Alty allocator_value = _Alty())
+        : _Alval(allocator_value)
+    {
+    }
+
+    _Alty _Alval;
+};
+
+// Layout: the allocator, then a union of the small buffer and the heap pointer, then the length and the
+// capacity. Capacity below _BUF_SIZE means the small buffer is in use; heap blocks are capacity + 1 elements.
+template<class _Elem, class _Traits, class _Ax> class basic_string : public _String_val<_Elem, _Ax>
+{
+public:
+    typedef basic_string<_Elem, _Traits, _Ax> _Myt;
+    typedef _String_val<_Elem, _Ax> _Mybase;
+    typedef typename _Mybase::_Alty _Alloc;
+    typedef typename _Alloc::size_type size_type;
+    typedef typename _Alloc::difference_type _Dift;
+    typedef _Dift difference_type;
+    typedef typename _Alloc::pointer _Tptr;
+    typedef typename _Alloc::const_pointer _Ctptr;
+    typedef _Tptr pointer;
+    typedef _Ctptr const_pointer;
+    typedef typename _Alloc::reference _Reft;
+    typedef _Reft reference;
+    typedef typename _Alloc::const_reference const_reference;
+    typedef typename _Alloc::value_type value_type;
+    typedef _Traits traits_type;
+    typedef _Alloc allocator_type;
+
+    static const size_type npos;
+
+    __CLR_OR_THIS_CALL basic_string()
+        : _Mybase()
+    {
+        _Tidy();
+    }
+
+    explicit __CLR_OR_THIS_CALL basic_string(const _Alloc &allocator_value)
+        : _Mybase(allocator_value)
+    {
+        _Tidy();
+    }
+
+    __CLR_OR_THIS_CALL basic_string(const _Myt &other)
+        : _Mybase(other._Alval)
+    {
+        _Tidy();
+        assign(other, 0, npos);
+    }
+
+    __CLR_OR_THIS_CALL basic_string(const _Myt &other, size_type offset, size_type count = npos)
+        : _Mybase()
+    {
+        _Tidy();
+        assign(other, offset, count);
+    }
+
+    __CLR_OR_THIS_CALL basic_string(const _Elem *source, size_type count)
+        : _Mybase()
+    {
+        _Tidy();
+        assign(source, count);
+    }
+
+    __CLR_OR_THIS_CALL basic_string(const _Elem *source)
+        : _Mybase()
+    {
+        _Tidy();
+        assign(source);
+    }
+
+    __CLR_OR_THIS_CALL basic_string(size_type count, _Elem ch)
+        : _Mybase()
+    {
+        _Tidy();
+        assign(count, ch);
+    }
+
+    __CLR_OR_THIS_CALL ~basic_string()
+    {
+        _Tidy(true);
+    }
+
+    _Myt &__CLR_OR_THIS_CALL operator=(const _Myt &other)
+    {
+        return assign(other);
+    }
+
+    _Myt &__CLR_OR_THIS_CALL operator=(const _Elem *source)
+    {
+        return assign(source);
+    }
+
+    _Myt &__CLR_OR_THIS_CALL operator=(_Elem ch)
+    {
+        return assign(1, ch);
+    }
+
+    _Myt &__CLR_OR_THIS_CALL assign(const _Myt &other)
+    {
+        return assign(other, 0, npos);
+    }
+
+    _Myt &__CLR_OR_THIS_CALL assign(const _Myt &other, size_type offset, size_type count)
+    {
+        if (other.size() < offset)
+            _String_base::_Xran();
+        size_type number = other.size() - offset;
+        if (count < number)
+            number = count;
+
+        if (this == &other) {
+            // a substring of itself: cut the tail, then the head
+            erase((size_type)(offset + number)), erase(0, offset);
+        } else if (_Grow(number)) {
+            _Traits_helper::copy_s<_Traits>(_Myptr(), _Myres, other._Myptr() + offset, number);
+            _Eos(number);
+        }
+        return *this;
+    }
+
+    _Myt &__CLR_OR_THIS_CALL assign(const _Elem *source, size_type count)
+    {
+        if (_Inside(source))
+            return assign(*this, source - _Myptr(), count);
+
+        if (_Grow(count)) {
+            _Traits_helper::copy_s<_Traits>(_Myptr(), _Myres, source, count);
+            _Eos(count);
+        }
+        return *this;
+    }
+
+    _Myt &__CLR_OR_THIS_CALL assign(const _Elem *source)
+    {
+        return assign(source, _Traits::length(source));
+    }
+
+    _Myt &__CLR_OR_THIS_CALL assign(size_type count, _Elem ch)
+    {
+        if (count == npos)
+            _String_base::_Xlen();
+
+        if (_Grow(count)) {
+            _Chassign(0, count, ch);
+            _Eos(count);
+        }
+        return *this;
+    }
+
+    _Myt &__CLR_OR_THIS_CALL erase(size_type offset = 0, size_type count = npos)
+    {
+        if (_Mysize < offset)
+            _String_base::_Xran();
+        if (_Mysize - offset < count)
+            count = _Mysize - offset;
+        if (0 < count) {
+            // close the gap over the erased elements
+            _Traits_helper::move_s<_Traits>(_Myptr() + offset, _Myres - offset, _Myptr() + offset + count,
+                _Mysize - offset - count);
+            size_type new_size = _Mysize - count;
+            _Eos(new_size);
+        }
+        return *this;
+    }
+
+    const _Elem *__CLR_OR_THIS_CALL c_str() const
+    {
+        return _Myptr();
+    }
+
+    const _Elem *__CLR_OR_THIS_CALL data() const
+    {
+        return c_str();
+    }
+
+    size_type __CLR_OR_THIS_CALL length() const
+    {
+        return _Mysize;
+    }
+
+    size_type __CLR_OR_THIS_CALL size() const
+    {
+        return _Mysize;
+    }
+
+    size_type __CLR_OR_THIS_CALL max_size() const
+    {
+        size_type number = _Mybase::_Alval.max_size();
+        return number <= 1 ? 1 : number - 1;
+    }
+
+    size_type __CLR_OR_THIS_CALL capacity() const
+    {
+        return _Myres;
+    }
+
+    bool __CLR_OR_THIS_CALL empty() const
+    {
+        return _Mysize == 0;
+    }
+
+    allocator_type __CLR_OR_THIS_CALL get_allocator() const
+    {
+        return _Mybase::_Alval;
+    }
+
+    enum
+    {
+        _BUF_SIZE = 16 / sizeof(_Elem) < 1 ? 1 : 16 / sizeof(_Elem)
+    };
+
+protected:
+    enum
+    {
+        _ALLOC_MASK = sizeof(_Elem) <= 1 ? 15 : sizeof(_Elem) <= 2 ? 7 : sizeof(_Elem) <= 4 ? 3 : sizeof(_Elem) <= 8 ? 1 : 0
+    };
+
+    void __CLR_OR_THIS_CALL _Chassign(size_type offset, size_type count, _Elem ch)
+    {
+        if (count == 1)
+            _Traits::assign(*(_Myptr() + offset), ch);
+        else
+            _Traits::assign(_Myptr() + offset, count, ch);
+    }
+
+    // Move to a new heap block for new_size elements, keeping the first old_length: the request is rounded up to
+    // the allocation mask, and grows by half the current capacity when that is larger and still representable.
+    void __CLR_OR_THIS_CALL _Copy(size_type new_size, size_type old_length)
+    {
+        size_type new_reserved = new_size | _ALLOC_MASK;
+        if (max_size() < new_reserved)
+            new_reserved = new_size;
+        else if (new_reserved / 3 < _Myres / 2 && _Myres <= max_size() - _Myres / 2)
+            new_reserved = _Myres + _Myres / 2;
+        _Elem *block = 0;
+
+        _TRY_BEGIN
+            block = _Mybase::_Alval.allocate(new_reserved + 1);
+        _CATCH_ALL
+            new_reserved = new_size;
+            _TRY_BEGIN
+                block = _Mybase::_Alval.allocate(new_reserved + 1);
+            _CATCH_ALL
+                _Tidy(true);
+                _RERAISE;
+            _CATCH_END
+        _CATCH_END
+
+        if (0 < old_length)
+            _Traits_helper::copy_s<_Traits>(block, new_reserved + 1, _Myptr(), old_length);
+        _Tidy(true);
+        _Bx._Ptr = block;
+        _Myres = new_reserved;
+        _Eos(old_length);
+    }
+
+    void __CLR_OR_THIS_CALL _Eos(size_type new_size)
+    {
+        _Traits::assign(_Myptr()[_Mysize = new_size], _Elem());
+    }
+
+    // Make room for new_size elements (optionally shrinking back into the small buffer); true when there is
+    // something left for the caller to copy.
+    bool __CLR_OR_THIS_CALL _Grow(size_type new_size, bool trim = false)
+    {
+        if (max_size() < new_size)
+            _String_base::_Xlen();
+        if (_Myres < new_size)
+            _Copy(new_size, _Mysize);
+        else if (trim && new_size < _BUF_SIZE)
+            _Tidy(true, new_size < _Mysize ? new_size : _Mysize);
+        else if (new_size == 0)
+            _Eos(0);
+        return 0 < new_size;
+    }
+
+    bool __CLR_OR_THIS_CALL _Inside(const _Elem *where)
+    {
+        if (where < _Myptr() || _Myptr() + _Mysize <= where)
+            return false;
+        else
+            return true;
+    }
+
+    // Back to the small buffer: with built set, free a heap block, carrying its first new_size elements over.
+    void __CLR_OR_THIS_CALL _Tidy(bool built = false, size_type new_size = 0)
+    {
+        if (!built)
+            ;
+        else if (_BUF_SIZE <= _Myres) {
+            _Elem *block = _Bx._Ptr;
+            if (0 < new_size)
+                _Traits_helper::copy_s<_Traits>(_Bx._Buf, _BUF_SIZE, block, new_size);
+            _Mybase::_Alval.deallocate(block, _Myres + 1);
+        }
+        _Myres = _BUF_SIZE - 1;
+        _Eos(new_size);
+    }
+
+    union _Bxty
+    {
+        _Elem _Buf[_BUF_SIZE];
+        _Elem *_Ptr;
+    } _Bx;
+
+    _Elem *__CLR_OR_THIS_CALL _Myptr()
+    {
+        return _BUF_SIZE <= _Myres ? _Bx._Ptr : _Bx._Buf;
+    }
+
+    const _Elem *__CLR_OR_THIS_CALL _Myptr() const
+    {
+        return _BUF_SIZE <= _Myres ? _Bx._Ptr : _Bx._Buf;
+    }
+
+    size_type _Mysize;
+    size_type _Myres;
+};
+
+template<class _Elem, class _Traits, class _Alloc>
+const typename basic_string<_Elem, _Traits, _Alloc>::size_type basic_string<_Elem, _Traits, _Alloc>::npos =
+    (typename basic_string<_Elem, _Traits, _Alloc>::size_type)(-1);
+
+typedef basic_string<char, char_traits<char>, allocator<char> > string;
+
+_STD_END
+
+#pragma pack(pop)
+
+#endif // _XSTRING_

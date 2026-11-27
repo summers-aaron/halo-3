@@ -1,0 +1,174 @@
+# Unified, pinned, multi-stage build image for the Halo 3 PC port (64-bit Linux x86_64 + Windows).
+#
+#   Stage 1 (mingw-sysroot):
+#     - Fedora 44 by digest, base release repo only (frozen packages).
+#     - MinGW-w64 13.0.0-3.fc44 CRT + headers for both i686 (halo3.exe) and x86_64 (Odin Windows tools / future x64).
+#       Older MinGW CRTs lack _invalid_parameter.
+#
+#   Stage 2 (builder):
+#     - Debian 11 (bullseye-slim) by digest, frozen archive.debian.org (glibc 2.31).
+#       Every Linux x86_64 binary built here requires at most GLIBC_2.31 (runs on Ubuntu 20.04+, Debian 11+,
+#       RHEL/Rocky/Alma 9+, Fedora, Arch, SteamOS, Bazzite, Mint, Pop!_OS — zero 32-bit host packages needed).
+#     - LLVM / Clang / LLD 22.1.8 pinned from apt.llvm.org (bullseye-22), GPG key verified by sha256:
+#       exact same compiler builds BOTH Linux and Windows, emitting MSVC ??_E vector deleting destructors.
+#     - CMake 3.31.7, Ninja 1.13.2, static Odin dev-2026-11a, static zlib 1.3.1 (built for both Linux x86_64
+#       and Windows x86_64 so shaderpack needs neither libz.so.1 nor zlib1.dll), and pinned AppImage
+#       type2-runtime (20251108, static-pie musl + libfuse3 + zstd) — all verified by sha256.
+#     - FreeType headers (libfreetype6-dev) for optional runtime-dlopen'd HALO3_GUIDE_HD_TEXT=1.
+#
+# /etc/halo3-build-manifest records every pinned tool version, checksum, and package in the image.
+# Use through port/build/container/build.sh (podman or docker).
+
+FROM docker.io/library/fedora:44@sha256:15da97ed9aa94dd3d92c3925eb89520f6c80e07ea7ee24cba848d1f8b6912b3e AS mingw-sysroot
+
+ARG MINGW_RELEASE=13.0.0-3.fc44
+
+RUN dnf -y --disablerepo='*' --enablerepo=fedora --setopt=install_weak_deps=False install \
+        "mingw32-crt-${MINGW_RELEASE}" "mingw32-headers-${MINGW_RELEASE}" \
+        "mingw64-crt-${MINGW_RELEASE}" "mingw64-headers-${MINGW_RELEASE}" \
+ && dnf clean all
+
+# ---------------------------------------------------------------------------
+FROM docker.io/library/debian:11-slim@sha256:e5b6442dd2e9684cf5e87d8338b5968f3b348636fc0be6d7850a381e3731a2bd
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC \
+    LC_ALL=C.UTF-8
+
+ARG LLVM_GPG_SHA256=8b2a587ffd672c4687e7581dad4b2f6c1bb2ad6b480cd9771ba2ff48e0b8c75d
+ARG LLVM_VERSION=1:22.1.8-1~deb11u1
+
+ARG CMAKE_VERSION=3.31.7
+ARG CMAKE_SHA256=14e15d0b445dbeac686acc13fe13b3135e8307f69ccf4c5c91403996ce5aa2d4
+
+ARG NINJA_VERSION=1.13.2
+ARG NINJA_SHA256=5749cbc4e668273514150a80e387a957f933c6ed3f5f11e03fb30955e2bbead6
+
+ARG ODIN_TAG=dev-2026-11a
+ARG ODIN_SHA256=65c9f6e97d6f8a30930e151f270ce5aeaa98fe8b2ba49fe067394e2af04f7618
+
+ARG ZLIB_VERSION=1.3.1
+ARG ZLIB_SHA256=9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23
+
+ARG APPIMAGE_RT_TAG=20251108
+ARG APPIMAGE_RT_SHA256=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+
+# Point apt at the frozen Debian 11 archive (bullseye LTS ended Aug 2026 -> immutable archive).
+RUN printf '%s\n' \
+      'deb http://archive.debian.org/debian bullseye main' \
+      'deb http://archive.debian.org/debian-security bullseye-security main' \
+      > /etc/apt/sources.list \
+ && apt-get -o Acquire::Check-Valid-Until=false update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl gnupg \
+      bash coreutils diffutils findutils gawk grep sed tar gzip xz-utils \
+      zip unzip file binutils make \
+      libc6-dev libgcc-10-dev libstdc++-10-dev libfreetype6-dev \
+      libx11-dev libdbus-1-dev \
+      squashfs-tools desktop-file-utils librsvg2-bin librsvg2-common flatpak ostree faketime nsis \
+ && curl -fsSL -o /tmp/llvm.gpg.key https://apt.llvm.org/llvm-snapshot.gpg.key \
+ && echo "${LLVM_GPG_SHA256}  /tmp/llvm.gpg.key" | sha256sum -c - \
+ && gpg --dearmor -o /usr/share/keyrings/llvm.gpg < /tmp/llvm.gpg.key \
+ && rm -f /tmp/llvm.gpg.key \
+ && printf 'deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-22 main\n' \
+      > /etc/apt/sources.list.d/llvm22.list \
+ && apt-get -o Acquire::Check-Valid-Until=false update \
+ && apt-get install -y --no-install-recommends \
+      "clang-22=${LLVM_VERSION}" \
+      "lld-22=${LLVM_VERSION}" \
+      "llvm-22=${LLVM_VERSION}" \
+ && rm -rf /var/lib/apt/lists/* \
+ && for pair in \
+      clang-22:clang clang-22:cc clang++-22:clang++ clang++-22:c++ \
+      lld-22:lld ld.lld-22:ld.lld lld-link-22:lld-link \
+      llvm-nm-22:llvm-nm llvm-objdump-22:llvm-objdump llvm-objcopy-22:llvm-objcopy \
+      llvm-ar-22:llvm-ar llvm-rc-22:llvm-rc llvm-strip-22:llvm-strip llvm-readobj-22:llvm-readobj; do \
+      src="${pair%%:*}"; dst="${pair##*:}"; \
+      ln -sf "/usr/bin/${src}" "/usr/local/bin/${dst}"; \
+    done
+
+# Pinned CMake (Debian 11 ships 3.18; project requires >= 3.24)
+RUN curl -fsSL -o /tmp/cmake.tar.gz \
+      "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
+ && echo "${CMAKE_SHA256}  /tmp/cmake.tar.gz" | sha256sum -c - \
+ && mkdir -p /opt/cmake \
+ && tar -xzf /tmp/cmake.tar.gz --strip-components=1 -C /opt/cmake \
+ && rm -f /tmp/cmake.tar.gz \
+ && ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
+
+# Pinned Ninja
+RUN curl -fsSL -o /tmp/ninja.zip \
+      "https://github.com/ninja-build/ninja/releases/download/v${NINJA_VERSION}/ninja-linux.zip" \
+ && echo "${NINJA_SHA256}  /tmp/ninja.zip" | sha256sum -c - \
+ && unzip -q /tmp/ninja.zip -d /usr/local/bin \
+ && chmod 0755 /usr/local/bin/ninja \
+ && rm -f /tmp/ninja.zip
+
+# Pinned static Odin compiler
+RUN curl -fsSL -o /tmp/odin.tar.gz \
+      "https://github.com/odin-lang/Odin/releases/download/${ODIN_TAG}/odin-linux-amd64-${ODIN_TAG}.tar.gz" \
+ && echo "${ODIN_SHA256}  /tmp/odin.tar.gz" | sha256sum -c - \
+ && mkdir -p /opt/odin \
+ && tar -xzf /tmp/odin.tar.gz --strip-components=1 -C /opt/odin \
+ && rm -f /tmp/odin.tar.gz \
+ && ln -sf /opt/odin/odin /usr/local/bin/odin
+
+# Pinned MinGW-w64 13.0.0 sysroots (32-bit for halo3.exe + 64-bit for Windows Odin tools)
+COPY --from=mingw-sysroot /usr/i686-w64-mingw32/sys-root/mingw /opt/mingw32
+COPY --from=mingw-sysroot /usr/x86_64-w64-mingw32/sys-root/mingw /opt/mingw64
+RUN mkdir -p /usr/i686-w64-mingw32/sys-root /usr/x86_64-w64-mingw32/sys-root \
+ && ln -sf /opt/mingw32 /usr/i686-w64-mingw32/sys-root/mingw \
+ && ln -sf /opt/mingw64 /usr/x86_64-w64-mingw32/sys-root/mingw
+
+# Build deterministic static zlib 1.3.1 for both Linux x86_64 and Windows x86_64
+# so shaderpack needs neither libz.so.1 (Linux) nor zlib1.dll (Windows).
+RUN curl -fsSL -o /tmp/zlib.tar.gz \
+      "https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz" \
+ && echo "${ZLIB_SHA256}  /tmp/zlib.tar.gz" | sha256sum -c - \
+ && mkdir -p /tmp/zlib-src /opt/static-zlib/linux /opt/static-zlib/win64 \
+ && tar -xzf /tmp/zlib.tar.gz --strip-components=1 -C /tmp/zlib-src \
+ && cd /tmp/zlib-src \
+ && ZLIB_SRCS="adler32.c compress.c crc32.c deflate.c infback.c inffast.c inflate.c inftrees.c trees.c uncompr.c zutil.c" \
+ && mkdir -p build-lin build-win \
+ && for f in ${ZLIB_SRCS}; do \
+      clang --target=x86_64-linux-gnu -O2 -fPIC -DNO_GZCOMPRESS -DNO_GZIP -c "$f" -o "build-lin/${f%.c}.o"; \
+      clang --target=x86_64-w64-mingw32 --sysroot=/opt/mingw64 -isystem /opt/mingw64/include \
+        -O2 -DNO_GZCOMPRESS -DNO_GZIP -c "$f" -o "build-win/${f%.c}.obj"; \
+    done \
+ && llvm-ar rcsD /opt/static-zlib/linux/libz.a build-lin/*.o \
+ && llvm-ar rcsD /opt/static-zlib/win64/libz.a build-win/*.obj \
+ && rm -rf /tmp/zlib.tar.gz /tmp/zlib-src
+
+# Pinned AppImage Type 2 static runtime (musl + libfuse3 + squashfuse + zstd; works with fusermount & fusermount3)
+RUN mkdir -p /opt/appimage \
+ && curl -fsSL -o /opt/appimage/runtime-x86_64 \
+      "https://github.com/AppImage/type2-runtime/releases/download/${APPIMAGE_RT_TAG}/runtime-x86_64" \
+ && echo "${APPIMAGE_RT_SHA256}  /opt/appimage/runtime-x86_64" | sha256sum -c - \
+ && chmod 0755 /opt/appimage/runtime-x86_64
+
+# Record full build manifest inside the image for reproducibility audits.
+RUN { echo "# halo3 PC port unified reproducible build image (Debian 11 glibc 2.31 + LLVM 22.1.8 + MinGW-w64 13.0.0)"; \
+      ldd --version | head -1; \
+      clang --version | head -1; \
+      lld-link --version; \
+      odin version; \
+      cmake --version | head -1; \
+      echo "ninja $(ninja --version)"; \
+      mksquashfs -version | head -1; \
+      echo "makensis $(makensis -VERSION)"; \
+      rsvg-convert --version; \
+      flatpak --version; \
+      ostree --version | head -1; \
+      echo "zlib-static ${ZLIB_VERSION} sha256=${ZLIB_SHA256}"; \
+      echo "appimage-type2-runtime ${APPIMAGE_RT_TAG} sha256=${APPIMAGE_RT_SHA256}"; \
+      echo "# packages"; \
+      dpkg-query -W -f='${Package}=${Version} (${Architecture})\n' | sort; \
+    } > /etc/halo3-build-manifest
+
+ENV MINGW_LIB=/opt/mingw32/lib \
+    MINGW64_LIB=/opt/mingw64/lib \
+    HALO3_STATIC_ZLIB_LINUX=/opt/static-zlib/linux/libz.a \
+    HALO3_STATIC_ZLIB_WIN64=/opt/static-zlib/win64/libz.a \
+    HALO3_APPIMAGE_RUNTIME=/opt/appimage/runtime-x86_64
+
+WORKDIR /src

@@ -1,0 +1,13 @@
+# port/build/sdk-replaced-units.txt: tu/ units of Xbox SDK libraries whose whole job the port's SDK does itself, so the
+# stage-1 link (link-stage1.sh) leaves their objects out. They still compile with the game (halo3_game), which keeps
+# them building against the headers, but nothing the port runs calls them and the console library code they call does
+# not exist on the PC: linked, every one of those callees would be a function stub. One unit per line, as tu/<path>.
+#
+# d3dx9.lib's image encoders, which only D3DXSaveSurfaceToFile* reach. port/sdk/d3d/d3dx_image.cpp writes JPEG and PNG
+# with port/sdk/d3d/d3dx_encode.cpp instead (GAME-CHANGES F58). Linked, these four left 29 function stubs: IJG
+# libjpeg's jinit_* / emit_dht / emit_sof, libpng's png_write_* / png_*crc / png_error / png_malloc / png_z*, zlib's
+# deflate_* / _tr_* / flush_pending, all in namespace D3DX.
+tu/d3dx9/deflate.cpp
+tu/d3dx9/jcinit.cpp
+tu/d3dx9/jcmarker.cpp
+tu/d3dx9/pngwutil.cpp

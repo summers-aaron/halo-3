@@ -1,0 +1,6 @@
+#ifndef NETWORKING_ONLINE_VOICE_PACKET_HEADER_TYPES_H
+#define NETWORKING_ONLINE_VOICE_PACKET_HEADER_TYPES_H
+
+struct s_voice_packet_header { unsigned char sequence; };
+
+#endif // NETWORKING_ONLINE_VOICE_PACKET_HEADER_TYPES_H

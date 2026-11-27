@@ -1,0 +1,8 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_JOIN_SERVICES_H
+#define NETWORKING_SESSION_NETWORK_SESSION_JOIN_SERVICES_H
+
+struct s_network_session_host_owner;
+
+extern "C" long network_session_get_join_refuse_reason(s_network_session_host_owner *session);
+
+#endif // NETWORKING_SESSION_NETWORK_SESSION_JOIN_SERVICES_H

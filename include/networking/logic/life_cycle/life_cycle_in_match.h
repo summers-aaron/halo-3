@@ -1,0 +1,8 @@
+#ifndef INCLUDE_NETWORKING_LOGIC_LIFE_CYCLE_LIFE_CYCLE_IN_MATCH_H
+#define INCLUDE_NETWORKING_LOGIC_LIFE_CYCLE_LIFE_CYCLE_IN_MATCH_H
+
+class c_life_cycle_state_handler_in_match;
+
+extern "C" void life_cycle_precache_mainmenu_after_game(c_life_cycle_state_handler_in_match *handler);
+
+#endif // INCLUDE_NETWORKING_LOGIC_LIFE_CYCLE_LIFE_CYCLE_IN_MATCH_H

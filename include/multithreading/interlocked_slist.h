@@ -1,0 +1,10 @@
+#ifndef INCLUDE_MULTITHREADING_INTERLOCKED_SLIST_H
+#define INCLUDE_MULTITHREADING_INTERLOCKED_SLIST_H
+
+
+
+#ifndef _XTL_
+extern "C" void *InterlockedFlushSList(void *);
+#endif
+
+#endif // INCLUDE_MULTITHREADING_INTERLOCKED_SLIST_H

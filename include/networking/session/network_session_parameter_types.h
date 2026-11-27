@@ -1,0 +1,10 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_TYPES_H
+#define NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_TYPES_H
+
+// Functions defined in tu/networkinglibxbox/network_session_parameter_types.cpp that other units call.
+
+class c_network_session_parameter_type_collection;
+
+void network_session_parameter_types_register(c_network_session_parameter_type_collection *parameter_types);
+
+#endif // NETWORKING_SESSION_NETWORK_SESSION_PARAMETER_TYPES_H

@@ -1,0 +1,6 @@
+#ifndef NETWORKING_ONLINE_LSP_SERVER_ACQUIRE_RESULT_TYPES_H
+#define NETWORKING_ONLINE_LSP_SERVER_ACQUIRE_RESULT_TYPES_H
+
+enum e_online_lsp_server_acquire_result { acquire_pending, acquire_success, acquire_failed };
+
+#endif // NETWORKING_ONLINE_LSP_SERVER_ACQUIRE_RESULT_TYPES_H

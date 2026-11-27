@@ -1,0 +1,10 @@
+#ifndef INCLUDE_PHYS_HULL_MODE_H
+#define INCLUDE_PHYS_HULL_MODE_H
+
+enum phys_hull_mode {
+    PHYS_HULL_MODE_INVALID = 0,
+    PHYS_HULL_MODE_FAST = 1,
+    PHYS_HULL_MODE_ACCURATE_BUT_SLOW = 2
+};
+
+#endif

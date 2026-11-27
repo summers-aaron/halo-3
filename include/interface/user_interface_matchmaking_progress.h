@@ -1,0 +1,7 @@
+#ifndef INTERFACE_USER_INTERFACE_MATCHMAKING_PROGRESS_H
+#define INTERFACE_USER_INTERFACE_MATCHMAKING_PROGRESS_H
+
+struct s_life_cycle_matchmaking_progress;
+extern "C" s_life_cycle_matchmaking_progress g_user_interface_matchmaking_progress;
+
+#endif

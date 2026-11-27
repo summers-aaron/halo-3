@@ -1,0 +1,6 @@
+#ifndef INTERFACE_GUI_SAVED_FILM_SELECTED_ITEM_VTABLE_H
+#define INTERFACE_GUI_SAVED_FILM_SELECTED_ITEM_VTABLE_H
+
+#include "interface/gui_selected_items_saved_film.h"
+
+#endif

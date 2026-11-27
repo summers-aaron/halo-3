@@ -1,0 +1,8 @@
+#ifndef SAVED_GAMES_CONTENT_CATALOGUE_DEVICE_SELECTION_H
+#define SAVED_GAMES_CONTENT_CATALOGUE_DEVICE_SELECTION_H
+
+enum e_controller_index;
+
+void content_catalogue_display_device_selection_guide_interface(e_controller_index controller_index);
+
+#endif // SAVED_GAMES_CONTENT_CATALOGUE_DEVICE_SELECTION_H

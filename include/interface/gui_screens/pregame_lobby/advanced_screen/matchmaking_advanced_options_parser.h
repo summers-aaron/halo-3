@@ -1,0 +1,7 @@
+#ifndef INTERFACE_GUI_SCREENS_PREGAME_LOBBY_ADVANCED_SCREEN_MATCHMAKING_ADVANCED_OPTIONS_PARSER_H
+#define INTERFACE_GUI_SCREENS_PREGAME_LOBBY_ADVANCED_SCREEN_MATCHMAKING_ADVANCED_OPTIONS_PARSER_H
+
+// String parsers defined in gui_screen_matchmaking_advanced_options.cpp.
+bool parse_xml_search_preference_description(void *context, wchar_t *buffer, long count);
+
+#endif // INTERFACE_GUI_SCREENS_PREGAME_LOBBY_ADVANCED_SCREEN_MATCHMAKING_ADVANCED_OPTIONS_PARSER_H

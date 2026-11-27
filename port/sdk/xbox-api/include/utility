@@ -1,0 +1,119 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// utility: std::swap, std::pair and its comparisons, std::rel_ops.
+#pragma once
+#ifndef _UTILITY_
+#define _UTILITY_
+#include <iosfwd>
+
+#pragma pack(push, _CRT_PACKING)
+
+_STD_BEGIN
+
+// Exchange through a copy: the copy is taken from the left, then left gets right and right gets the copy.
+template<class _Ty> inline void swap(_Ty &a, _Ty &b)
+{
+    _Ty held = a;
+    a = b, b = held;
+}
+
+template<class _Ty1, class _Ty2> struct pair
+{
+    typedef pair<_Ty1, _Ty2> _Myt;
+    typedef _Ty1 first_type;
+    typedef _Ty2 second_type;
+
+    pair()
+        : first(_Ty1()), second(_Ty2())
+    {
+    }
+
+    pair(const _Ty1 &a, const _Ty2 &b)
+        : first(a), second(b)
+    {
+    }
+
+    template<class _Other1, class _Other2> pair(const pair<_Other1, _Other2> &other)
+        : first(other.first), second(other.second)
+    {
+    }
+
+    void swap(_Myt &other)
+    {
+        std::swap(first, other.first);
+        std::swap(second, other.second);
+    }
+
+    _Ty1 first;
+    _Ty2 second;
+};
+
+template<class _Ty1, class _Ty2> inline bool operator==(const pair<_Ty1, _Ty2> &a, const pair<_Ty1, _Ty2> &b)
+{
+    return a.first == b.first && a.second == b.second;
+}
+
+template<class _Ty1, class _Ty2> inline bool operator!=(const pair<_Ty1, _Ty2> &a, const pair<_Ty1, _Ty2> &b)
+{
+    return !(a == b);
+}
+
+// Lexicographic: by first, then by second.
+template<class _Ty1, class _Ty2> inline bool operator<(const pair<_Ty1, _Ty2> &a, const pair<_Ty1, _Ty2> &b)
+{
+    return a.first < b.first || (!(b.first < a.first) && a.second < b.second);
+}
+
+template<class _Ty1, class _Ty2> inline bool operator>(const pair<_Ty1, _Ty2> &a, const pair<_Ty1, _Ty2> &b)
+{
+    return b < a;
+}
+
+template<class _Ty1, class _Ty2> inline bool operator<=(const pair<_Ty1, _Ty2> &a, const pair<_Ty1, _Ty2> &b)
+{
+    return !(b < a);
+}
+
+template<class _Ty1, class _Ty2> inline bool operator>=(const pair<_Ty1, _Ty2> &a, const pair<_Ty1, _Ty2> &b)
+{
+    return !(a < b);
+}
+
+template<class _Ty1, class _Ty2> inline pair<_Ty1, _Ty2> make_pair(_Ty1 a, _Ty2 b)
+{
+    return pair<_Ty1, _Ty2>(a, b);
+}
+
+template<class _Ty1, class _Ty2> inline void swap(pair<_Ty1, _Ty2> &a, pair<_Ty1, _Ty2> &b)
+{
+    a.swap(b);
+}
+
+namespace rel_ops {
+
+template<class _Ty> inline bool operator!=(const _Ty &a, const _Ty &b)
+{
+    return !(a == b);
+}
+
+template<class _Ty> inline bool operator>(const _Ty &a, const _Ty &b)
+{
+    return b < a;
+}
+
+template<class _Ty> inline bool operator<=(const _Ty &a, const _Ty &b)
+{
+    return !(b < a);
+}
+
+template<class _Ty> inline bool operator>=(const _Ty &a, const _Ty &b)
+{
+    return !(a < b);
+}
+
+} // namespace rel_ops
+
+_STD_END
+
+#pragma pack(pop)
+
+#endif // _UTILITY_

@@ -1,0 +1,5 @@
+#ifndef NETWORKING_LOGIC_LIFE_CYCLE_MATCHMAKING_QUALITY_LEGACY_H
+#define NETWORKING_LOGIC_LIFE_CYCLE_MATCHMAKING_QUALITY_LEGACY_H
+#include "networking/logic/life_cycle/life_cycle_matchmaking_quality.h"
+
+#endif

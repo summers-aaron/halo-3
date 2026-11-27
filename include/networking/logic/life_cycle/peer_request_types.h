@@ -1,0 +1,10 @@
+#ifndef NETWORKING_LOGIC_LIFE_CYCLE_PEER_REQUEST_TYPES_H
+#define NETWORKING_LOGIC_LIFE_CYCLE_PEER_REQUEST_TYPES_H
+
+struct s_peer_request
+{
+    long a;
+    long peer;
+};
+
+#endif // NETWORKING_LOGIC_LIFE_CYCLE_PEER_REQUEST_TYPES_H

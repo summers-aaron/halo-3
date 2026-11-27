@@ -1,0 +1,8 @@
+#ifndef SCENARIO_SCENARIO_INTERPOLATOR_GLOBALS_H
+#define SCENARIO_SCENARIO_INTERPOLATOR_GLOBALS_H
+
+struct s_scenario_interpolator_globals;
+
+extern __declspec(thread) s_scenario_interpolator_globals *scenario_interpolator_globals;
+
+#endif

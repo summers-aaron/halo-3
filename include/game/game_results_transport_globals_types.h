@@ -1,0 +1,6 @@
+#ifndef GAME_GAME_RESULTS_TRANSPORT_GLOBALS_TYPES_H
+#define GAME_GAME_RESULTS_TRANSPORT_GLOBALS_TYPES_H
+
+#include "networking/transport/transport_security_globals.h"
+
+#endif // GAME_GAME_RESULTS_TRANSPORT_GLOBALS_TYPES_H

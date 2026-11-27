@@ -1,0 +1,6 @@
+#ifndef RASTERIZER_XENON_MAIN_IMPORTS_H
+#define RASTERIZER_XENON_MAIN_IMPORTS_H
+
+#include <xtl.h>
+
+#endif

@@ -1,0 +1,29 @@
+# port/sdk/d3d/null-functions.txt: the null graphics backend's quiet functions (plan stage 3: null graphics).
+# Each line is a C name prefix. A Direct3D or XG runtime function the port does not implement yet, and whose name
+# starts with one of these, does nothing and returns 0 (S_OK, NULL, FALSE) without reporting itself; the stage-1 stubs
+# report every other missing function. Implementations in port/sdk/d3d take precedence (a defined name is no stub).
+# Not listed on purpose: D3DX (math the game needs real results from) and the system XGet* calls.
+Direct3D_
+D3DDevice_
+D3DResource_
+D3DBaseTexture_
+D3DTexture_
+D3DCubeTexture_
+D3DArrayTexture_
+D3DVolumeTexture_
+D3DSurface_
+D3DVertexBuffer_
+D3DIndexBuffer_
+D3DVertexDeclaration_
+D3DVertexShader_
+D3DPixelShader_
+D3DQuery_
+D3DCommandBuffer_
+D3DConstantBuffer_
+D3DPerfCounters_
+D3DPerfCounterBatch_
+D3DAsyncCommandBufferCall_
+XGSet
+XGGet
+XGOffset
+XGRegister

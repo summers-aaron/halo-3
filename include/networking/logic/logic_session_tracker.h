@@ -1,0 +1,17 @@
+#ifndef NETWORKING_LOGIC_LOGIC_SESSION_TRACKER_H
+#define NETWORKING_LOGIC_LOGIC_SESSION_TRACKER_H
+
+#include "networking/logic/logic_session_tracker_types.h"
+#include "networking/logic/logic_session_tracker_unsuitable_reason_types.h"
+
+struct s_transport_session_description;
+struct s_session_tracker_globals;
+
+bool network_session_tracker_mark_session_unsuitable(const s_transport_session_description *description,
+    e_network_session_tracker_session_unsuitable_reason reason);
+bool network_session_tracker_mark_session_undesirable(const s_transport_session_description *description,
+    e_network_session_tracker_session_undesirable_reason reason);
+
+extern s_session_tracker_globals session_tracker_globals;
+
+#endif // NETWORKING_LOGIC_LOGIC_SESSION_TRACKER_H

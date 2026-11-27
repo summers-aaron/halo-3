@@ -1,0 +1,270 @@
+--- hlsl/chud_cortana_composite.hlsl
++++ hlsl/chud_cortana_composite.hlsl
+@@ -176,9 +176,7 @@
+ 	accum_pixel result_pixel;
+ 	result_pixel.color= background_gravemind+foreground;
+ 
+-#ifdef pc	
+-	result_pixel.color.rgb = d3dSRGBInvGamma(result_pixel.color.rgb);
+-#endif
++	// port: the Xbox writes the composite as is (MCC PC decoded it from sRGB for its sRGB-stored targets)
+ 	
+ 	return result_pixel;
+ 	
+--- hlsl/chud_cortana_screen.hlsl
++++ hlsl/chud_cortana_screen.hlsl
+@@ -67,9 +67,8 @@
+ {
+ 	float4 result= sample2D(basemap_sampler, texcoord);	
+ 
+-#ifdef pc
+-  result.rgb = d3dSRGBInvGamma(result.rgb);
+-#endif
++// port: no sRGB decode: the port's texture fetch already degammas GPUSIGN_GAMMA bitmaps as the Xbox does (MCC PC
++// bitmaps were plain sRGB-encoded)
+ 
+ 	return build_subpixel_result_shared(result);
+ }
+--- hlsl/chud_meter_double_gradient.hlsl
++++ hlsl/chud_meter_double_gradient.hlsl
+@@ -170,7 +170,18 @@
+ 	result.a*=chud_scalar_output_EF.w;
+ 
+ #else // pc
+-	float4 result= float4(0,0,0,0);
++	// port: the Xbox branch (MCC PC drew nothing: result 0). getGradients is (ddx(u), ddy(u), ddx(v), ddy(v)) (xenia
++	// spirv_shader_translator_fetch.cc kGetTextureGradients)
++	float2 texcoord= IN.Texcoord;
++	float4 gradients= float4(ddx(texcoord.x), ddy(texcoord.x), ddx(texcoord.y), ddy(texcoord.y));
++
++	float4 result= 0.0;
++	result+= build_subpixel_result(build_subsample_texcoord(texcoord, gradients, -2.0/9.0,  2.0/9.0));
++	result+= build_subpixel_result(build_subsample_texcoord(texcoord, gradients, -2.0/9.0, -2.0/9.0));
++	result+= build_subpixel_result(build_subsample_texcoord(texcoord, gradients,  2.0/9.0, -2.0/9.0));
++	result+= build_subpixel_result(build_subsample_texcoord(texcoord, gradients,  2.0/9.0,  2.0/9.0));
++	result /= 4.0;
++	result.a*=chud_scalar_output_EF.w;
+ #endif // pc
+ 
+ 	//float4 result= build_subpixel_result(IN.Texcoord);
+--- hlsl/chud_turbulence.hlsl
++++ hlsl/chud_turbulence.hlsl
+@@ -132,7 +132,7 @@
+ 	const float offset = 0.5f;
+ #endif
+ 	result.xy= max_chud_distortion * 16.0f * 2.0f * (result.xy - offset);
+-	result.xy = result.xy * 1024.0f / 32767.0f; // on PC use [0, 1] range instead [6/12/2012 paul.smirnov]
++	// port: Xbox units, as particle_render.hlsl: the distortion target keeps the EDRAM range the game clears to 16.0
+ #else
+ 	result.xy= max_chud_distortion * 16.0f * 2.0f * (result.xy - 0.5f);
+ #endif
+--- hlsl/cortana.fx
++++ hlsl/cortana.fx
+@@ -604,9 +604,8 @@
+ 	//float4 hdr_color= sample2D(scene_hdr_texture, uv.xy);	
+ 	float4 ldr_color= sample2D(scene_ldr_texture, uv.xy);
+ 
+-#ifdef pc
+-  ldr_color.rgb = d3dSRGBInvGamma(ldr_color.rgb);
+-#endif
++// port: no sRGB decode: the port's scene_ldr_texture fetch already returns what the Xbox fetch does (the LDR
++// target's linear colours; MCC PC stored its LDR target sRGB-encoded)
+ 	
+ 	float3 true_scene_color= lerp(color_transparency.rgb, ldr_color.rgb, saturate(color_transparency.a + saturate(1.0f-transparency)));
+ 	float4 result= float4(true_scene_color, 1.0f);
+--- hlsl/debug.hlsl
++++ hlsl/debug.hlsl
+@@ -2,12 +2,9 @@
+ 
+ // define before render_target.fx
+ #ifndef LDR_ALPHA_ADJUST
+-#ifdef pc
+-#define LDR_ALPHA_ADJUST 1.0f
+-#else
++// port: the Xbox value (the LDR target is the Xbox's)
+ #define LDR_ALPHA_ADJUST 1.0f/32.0f
+ #endif
+-#endif
+ #ifndef DARK_COLOR_MULTIPLIER
+ #define DARK_COLOR_MULTIPLIER 128.0f
+ #endif
+--- hlsl/environment_mapping.fx
++++ hlsl/environment_mapping.fx
+@@ -48,11 +48,8 @@
+ 	reflect_dir.y= -reflect_dir.y;
+ 	
+ 	float4 reflection;
+-#ifdef pc	
+-	reflection= sampleCUBE(environment_map, reflect_dir);
+-#else
++	// port: level 0, as the Xbox fetch (MCC PC let the hardware pick the mip)
+ 	reflection= sampleCUBElod(environment_map, reflect_dir, 0.0f);
+-#endif
+ 	return reflection.rgb * specular_reflectance_and_roughness.xyz * low_frequency_specular_color * env_tint_color * reflection.a;
+ }
+ #endif // ENVMAP_TYPE_per_pixel
+@@ -81,16 +78,7 @@
+ 	
+ 	float4 reflection_0, reflection_1;
+ 	
+-#ifdef pc
+-	float grad_x= length(ddx(reflect_dir));
+-	float grad_y= length(ddy(reflect_dir));
+-	float base_lod= 6.0f * sqrt(max(grad_x, grad_y)) - 0.6f;
+-	float lod= max(base_lod, specular_reflectance_and_roughness.w * env_roughness_scale * 4);
+-	
+-	reflection_0= sampleCUBElod(dynamic_environment_map_0, reflect_dir, lod);
+-	reflection_1= sampleCUBElod(dynamic_environment_map_1, reflect_dir, lod);
+-	
+-#else	// xenon
++	// port: the Xbox branch: the level comes from the roughness only (MCC PC added a screen-gradient level)
+ 	float grad_x= 0.0f;
+ 	float grad_y= 0.0f;
+ 	float base_lod= 0.0f;
+@@ -98,7 +86,6 @@
+ 	
+ 	reflection_0= sampleCUBElod(dynamic_environment_map_0, reflect_dir, lod);
+ 	reflection_1= sampleCUBElod(dynamic_environment_map_1, reflect_dir, lod);
+-#endif
+ 
+ 	float3 reflection=  (reflection_0.rgb * reflection_0.a * 256) * dynamic_environment_blend.rgb + 
+ 						(reflection_1.rgb * reflection_1.a * 256) * (1.0f-dynamic_environment_blend.rgb);
+@@ -258,16 +245,8 @@
+ 	reflect_dir.y = -reflect_dir.y;
+ 
+ 	float4 reflection;
+-#ifdef pc
+-
+-	float grad_x = length(ddx(reflect_dir));
+-	float grad_y = length(ddy(reflect_dir));
+-	float base_lod = 6.0f * sqrt(max(grad_x, grad_y)) - 0.6f;
+-
+-	reflection = sampleCUBElod(environment_map, reflect_dir, base_lod);
+-#else
++	// port: level 0, as the Xbox fetch (MCC PC computed a level from the screen gradients)
+ 	reflection = sampleCUBElod(environment_map, reflect_dir, 0.0f);
+-#endif
+ 
+ 	return reflection.rgb;
+ }
+--- hlsl/foliage.fx
++++ hlsl/foliage.fx
+@@ -453,7 +453,9 @@
+ 		local_to_world_transform);
+ 
+ #ifdef pc
+-	float prt_c0= prt_c0_c3;
++	// port: the Xbox branch scales the fetched coefficient by 3.545 (below); the port feeds the same retail data, one
++	// value per vertex (vulkan_vertex_expand_packed_prt)
++	float prt_c0= prt_c0_c3 * 3.545f;
+ #else
+ 
+ 	// fetch PRT data from compressed 
+--- hlsl/hlsl_constant_persist.fx
++++ hlsl/hlsl_constant_persist.fx
+@@ -5,11 +5,9 @@
+ 
+ //NOTE: if you modify any of this, than you need to modify hlsl_constant_persist.h 
+ 
+-#if defined(pc) || defined(PC)
+-#define k_maximum_simple_light_count			8
+-#else
++// port: the Xbox game sends up to 16 simple lights (render_lights_submit_simple_light_draw_list_to_shader: count, then
++// 80 registers from c18; the retail constant tables declare simple_lights c18:80), not MCC PC's 8
+ #define k_maximum_simple_light_count			16
+-#endif
+ 
+ #ifndef DEFINE_CPP_CONSTANTS
+ #define always_true true
+--- hlsl/lens_flare.hlsl
++++ hlsl/lens_flare.hlsl
+@@ -31,20 +31,14 @@
+ 	float2 scaledPosition = IN.position.xy * flare_scale.xy;
+ 	position.x = dot(float2( cos_theta, sin_theta), scaledPosition);
+ 	position.y = dot(float2(-sin_theta, cos_theta), scaledPosition);
+-	position.xy *= flare_scale.zw;
+-	position.xy = position.x * transformed_axes.xy + position.y * transformed_axes.zw;
++	// port: the Xbox game writes only c240 (center, rotation) and c241 (projected size xy, size z; w is never set) for
++	// this shader (render_lens_flares.cpp lens_flare_render), and the retail vertex shader's constant table has only
++	// center_rotation and flare_scale: the size is the scalar z, and MCC's transformed_axes (c243) and
++	// origin_and_offset_bounds (c242) do not exist on the Xbox (they would read stale registers)
++	position.xy *= flare_scale.zz;
+ 
+ 	float2 centerOffset = CENTER;
+-	
+-	[branch]
+-	if (OFFSET_MIN > 0 || OFFSET_MAX > 0)
+-	{
+-		float2 offsetFromFlare = centerOffset - FLARE_ORIGIN;
+-		float offsetLength = length(offsetFromFlare);
+-		offsetFromFlare *= clamp(offsetLength, OFFSET_MIN, OFFSET_MAX) / offsetLength;
+-		centerOffset = FLARE_ORIGIN + offsetFromFlare;
+-	}
+-	
++
+ 	position.xy += centerOffset;
+ 
+ //	if (mirrorReflectionAcrossFlare)
+@@ -64,14 +58,9 @@
+  	float4 color= sample2D(source_sampler, texcoord);
+ 	float4 color_to_nth;
+ 
+-	if (legacy_h3_flares)
+-	{
+-		color_to_nth = pow(color, modulation_factor.y) * color;
+-	}
+-	else
+-	{
+-		color_to_nth = pow(color.gggg, modulation_factor.y);
+-	}
++	// port: Halo 3's flare curve; MCC's legacy_h3_flares (c52) is not in the retail constant table and the game never
++	// writes it
++	color_to_nth = pow(color, modulation_factor.y) * color;
+ 
+ 	float4 outColor = (color_to_nth * modulation_factor.x) + (color * tint_color); // color tinted external areas for cool exterior
+ 
+--- hlsl/particle_render.hlsl
++++ hlsl/particle_render.hlsl
+@@ -893,9 +893,9 @@
+ 
+ 	// Now use full positive range of render target [0.0,32.0)
+ 	float2 distortion= distortion_scale * frame_displacement;
+-#ifdef pc
+-	distortion = distortion * 1024.0f / 32767.0f; // on PC use [0, 1] range instead [6/12/2012 paul.smirnov]
+-#endif // pc
++	// port: the Xbox units, [0,32) on top of the 16.0 the game clears the 16_16 distortion target to
++	// (rasterizer_setup_distortion_targets); the port keeps that EDRAM range (32-bit float targets), so MCC PC's [0,1] rescale
++	// (distortion * 1024 / 32767) would land 1/32 of the displacement on the 16.0 clear
+ 	
+ 	//DLH - Ruffian - The distortion_expensive_diffuse flag doesn't exist so removed for now
+ 	//if (TEST_CATEGORY_OPTION(specialized_rendering, distortion_expensive) || TEST_CATEGORY_OPTION(specialized_rendering, distortion_expensive_diffuse))
+--- hlsl/self_illumination_halogram.fx
++++ hlsl/self_illumination_halogram.fx
+@@ -138,7 +138,10 @@
+ 	float4 color_0, color_1, color_2, color_3;
+ 	
+ #ifdef pc
+-	float2 texStep= float2(0.001736 / 2.0, 0.003125 / 2.0);
++	// port: half a texel of self_illum_map, as the Xbox OffsetX/Y= 0.5 (MCC PC assumed a 1152x640 texture)
++	uint2 self_illum_map_size;
++	self_illum_map.t.GetDimensions(self_illum_map_size.x, self_illum_map_size.y);
++	float2 texStep= 0.5f / float2(self_illum_map_size);
+  	color_0= sample2D(self_illum_map, float2(texcoord.x + texStep.x, texcoord.y + texStep.y));
+ 	color_1= sample2D(self_illum_map, float2(texcoord.x - texStep.x, texcoord.y + texStep.y));
+ 	color_2= sample2D(self_illum_map, float2(texcoord.x - texStep.x, texcoord.y - texStep.y));
+--- hlsl/water_ripple.hlsl
++++ hlsl/water_ripple.hlsl
+@@ -842,8 +842,11 @@
+ 	{
+ 		float4 tex_x2_y1, tex_x1_y2;
+ #ifdef pc
+-		tex_x2_y1 = sample2D(tex_ripple_buffer_height, float4(texcoord.x + 1.0/800.0, texcoord.y, 0, 0));
+-		tex_x1_y2 = sample2D(tex_ripple_buffer_height, float4(texcoord.x, texcoord.y + 1.0/800.0, 0, 0));
++		// port: one texel of the ripple buffer, as the Xbox OffsetX/Y= 1 (MCC PC assumed 800 texels)
++		uint2 ripple_size;
++		tex_ripple_buffer_height.t.GetDimensions(ripple_size.x, ripple_size.y);
++		tex_x2_y1 = sample2D(tex_ripple_buffer_height, float4(texcoord.x + 1.0 / ripple_size.x, texcoord.y, 0, 0));
++		tex_x1_y2 = sample2D(tex_ripple_buffer_height, float4(texcoord.x, texcoord.y + 1.0 / ripple_size.y, 0, 0));
+ #else
+ 		asm{ tfetch2D tex_x2_y1, texcoord, tex_ripple_buffer_height, OffsetX= 1.0f, MagFilter= point, MinFilter= point };
+ 		asm{ tfetch2D tex_x1_y2, texcoord, tex_ripple_buffer_height, OffsetY= 1.0f, MagFilter= point, MinFilter= point };

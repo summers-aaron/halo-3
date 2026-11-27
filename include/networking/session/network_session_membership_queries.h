@@ -1,0 +1,10 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_MEMBERSHIP_QUERIES_H
+#define NETWORKING_SESSION_NETWORK_SESSION_MEMBERSHIP_QUERIES_H
+
+class c_network_session_membership;
+
+bool managed_session_synchronize_to_player_list(long index, c_network_session_membership *membership);
+extern "C" bool network_owner_entry_is_pending(c_network_session_membership *membership, long peer_index);
+extern "C" bool network_session_membership_is_synchronized(const c_network_session_membership *membership);
+
+#endif // NETWORKING_SESSION_NETWORK_SESSION_MEMBERSHIP_QUERIES_H

@@ -1,0 +1,7 @@
+#ifndef NETWORKING_SESSION_NETWORK_SESSION_MANAGER_GLOBALS_H
+#define NETWORKING_SESSION_NETWORK_SESSION_MANAGER_GLOBALS_H
+
+class c_network_session_manager;
+extern "C" c_network_session_manager *g_network_session_manager;
+
+#endif // NETWORKING_SESSION_NETWORK_SESSION_MANAGER_GLOBALS_H

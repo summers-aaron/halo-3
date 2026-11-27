@@ -1,0 +1,8 @@
+#ifndef GAME_MATERIAL_CONSTANTS_H
+#define GAME_MATERIAL_CONSTANTS_H
+
+class c_global_material_type;
+extern const c_global_material_type k_global_material_type_invalid;
+extern const c_global_material_type k_global_material_type_default;
+
+#endif // GAME_MATERIAL_CONSTANTS_H

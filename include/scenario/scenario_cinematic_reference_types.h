@@ -1,0 +1,6 @@
+#ifndef SCENARIO_SCENARIO_CINEMATIC_REFERENCE_TYPES_H
+#define SCENARIO_SCENARIO_CINEMATIC_REFERENCE_TYPES_H
+
+struct s_scenario_cinematic_reference { s_tag_reference cinematic; };
+
+#endif // SCENARIO_SCENARIO_CINEMATIC_REFERENCE_TYPES_H

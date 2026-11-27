@@ -1,0 +1,6 @@
+#ifndef SIMULATION_SIMULATION_QUEUE_PLAYER_EVENT_TYPES_H
+#define SIMULATION_SIMULATION_QUEUE_PLAYER_EVENT_TYPES_H
+
+enum e_simulation_queue_player_event_type { _simulation_queue_player_event_active, _simulation_queue_player_event_respawn_target };
+
+#endif // SIMULATION_SIMULATION_QUEUE_PLAYER_EVENT_TYPES_H

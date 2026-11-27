@@ -1,0 +1,35 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// cstdio: <stdio.h> for C++, with the standard stream functions also visible in std.
+#pragma once
+#ifndef _CSTDIO_
+#define _CSTDIO_
+#include <yvals.h>
+#ifdef _STD_USING
+#undef _STD_USING
+#include <stdio.h>
+#define _STD_USING
+#else
+#include <stdio.h>
+#endif
+#define _HAS_CONVENTIONAL_CLIB 1
+#define _IOBASE _base
+#define _IOPTR _ptr
+#define _IOCNT _cnt
+#if _GLOBAL_USING
+_STD_BEGIN
+using ::size_t; using ::fpos_t; using ::FILE;
+using ::clearerr; using ::fclose; using ::feof; using ::ferror; using ::fflush; using ::fgetc; using ::fgetpos;
+using ::fgets; using ::fopen; using ::fprintf; using ::fputc; using ::fputs; using ::fread; using ::freopen;
+using ::fscanf; using ::fseek; using ::fsetpos; using ::ftell; using ::fwrite; using ::getc; using ::getchar;
+using ::gets; using ::perror; using ::putc; using ::putchar; using ::printf; using ::puts; using ::remove;
+using ::rename; using ::rewind; using ::scanf; using ::setbuf; using ::setvbuf; using ::sprintf; using ::sscanf;
+using ::tmpfile; using ::tmpnam; using ::ungetc; using ::vfprintf; using ::vprintf; using ::vsprintf;
+_STD_END
+#endif
+#ifndef _Filet
+#define _Filet FILE
+#endif
+#ifndef _FPOSOFF
+#define _FPOSOFF(fp) ((long)(fp))
+#endif
+#endif // _CSTDIO_

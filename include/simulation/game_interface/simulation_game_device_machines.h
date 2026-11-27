@@ -1,0 +1,4 @@
+#ifndef SIMULATION_GAME_INTERFACE_SIMULATION_GAME_DEVICE_MACHINES_H
+#define SIMULATION_GAME_INTERFACE_SIMULATION_GAME_DEVICE_MACHINES_H
+extern "C" void simulation_device_initialize_update_mask(int *flags);
+#endif

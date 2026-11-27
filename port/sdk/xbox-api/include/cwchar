@@ -1,0 +1,29 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// cwchar: <wchar.h> for C++, with the standard wide-character functions also visible in std.
+#pragma once
+#ifndef _CWCHAR_
+#define _CWCHAR_
+#include <yvals.h>
+#ifdef _STD_USING
+#undef _STD_USING
+#include <wchar.h>
+#define _STD_USING
+typedef mbstate_t _Mbstatet;
+#else
+#include <wchar.h>
+typedef mbstate_t _Mbstatet;
+#if _GLOBAL_USING
+_STD_BEGIN
+using ::mbstate_t; using ::size_t; using ::tm; using ::wint_t;
+using ::btowc; using ::fgetwc; using ::fgetws; using ::fputwc; using ::fputws; using ::fwide; using ::fwprintf;
+using ::fwscanf; using ::getwc; using ::getwchar; using ::mbrlen; using ::mbrtowc; using ::mbsrtowcs; using ::mbsinit;
+using ::putwc; using ::putwchar; using ::swprintf; using ::swscanf; using ::ungetwc; using ::vfwprintf;
+using ::vswprintf; using ::vwprintf; using ::wcrtomb; using ::wprintf; using ::wscanf; using ::wcsrtombs;
+using ::wcstol; using ::wcscat; using ::wcschr; using ::wcscmp; using ::wcscoll; using ::wcscpy; using ::wcscspn;
+using ::wcslen; using ::wcsncat; using ::wcsncmp; using ::wcsncpy; using ::wcspbrk; using ::wcsrchr; using ::wcsspn;
+using ::wcstod; using ::wcstoul; using ::wcsstr; using ::wcstok; using ::wcsxfrm; using ::wctob; using ::wmemchr;
+using ::wmemcmp; using ::wmemcpy; using ::wmemmove; using ::wmemset; using ::wcsftime;
+_STD_END
+#endif
+#endif
+#endif // _CWCHAR_

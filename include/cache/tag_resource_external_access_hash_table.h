@@ -1,0 +1,11 @@
+#ifndef CACHE_TAG_RESOURCE_EXTERNAL_ACCESS_HASH_TABLE_H
+#define CACHE_TAG_RESOURCE_EXTERNAL_ACCESS_HASH_TABLE_H
+
+struct s_tag_resource_cache_external_access_state;
+struct s_tag_resource_cache_external_access_pair;
+
+extern "C" void tag_resource_cache_initialize_hash_table(s_tag_resource_cache_external_access_state *state, s_tag_resource_cache_external_access_pair list,
+    s_tag_resource_cache_external_access_pair a, s_tag_resource_cache_external_access_pair b,
+    s_tag_resource_cache_external_access_pair c, s_tag_resource_cache_external_access_pair d);
+
+#endif

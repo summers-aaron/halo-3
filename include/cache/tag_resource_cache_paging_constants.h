@@ -1,0 +1,6 @@
+#ifndef CACHE_TAG_RESOURCE_CACHE_PAGING_CONSTANTS_H
+#define CACHE_TAG_RESOURCE_CACHE_PAGING_CONSTANTS_H
+
+extern "C" const unsigned char k_deflate_code_length_order[];
+
+#endif // CACHE_TAG_RESOURCE_CACHE_PAGING_CONSTANTS_H

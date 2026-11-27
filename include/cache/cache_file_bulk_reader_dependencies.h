@@ -1,0 +1,6 @@
+#ifndef CACHE_CACHE_FILE_BULK_READER_DEPENDENCIES_H
+#define CACHE_CACHE_FILE_BULK_READER_DEPENDENCIES_H
+
+extern "C" bool security_initialize_hash(void *, int, bool);
+
+#endif // CACHE_CACHE_FILE_BULK_READER_DEPENDENCIES_H

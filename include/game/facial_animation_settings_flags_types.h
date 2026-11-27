@@ -1,0 +1,6 @@
+#ifndef GAME_FACIAL_ANIMATION_SETTINGS_FLAGS_TYPES_H
+#define GAME_FACIAL_ANIMATION_SETTINGS_FLAGS_TYPES_H
+
+enum e_facial_animation_settings_flags { _facial_animation_settings_none };
+
+#endif // GAME_FACIAL_ANIMATION_SETTINGS_FLAGS_TYPES_H

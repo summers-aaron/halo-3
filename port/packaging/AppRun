@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# AppRun entry point for Halo 3 (Native 64-bit x86_64 PC Port) AppImage.
+#
+# Handles optional AppImage self-updates (when running from a writable .AppImage),
+# then hands off directly to usr/bin/halo3-launcher (native GUI setup, XDG Desktop
+# Portal ISO picker, live progress bar, preflight checks, and game launch).
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="$HERE/usr/bin"
+SHARE="$HERE/usr/share/halo3"
+ORIG_ARGS=("$@")
+
+LOCAL_VERSION="unknown"
+[[ -f "$SHARE/VERSION" ]] && LOCAL_VERSION="$(tr -d '\r\n' < "$SHARE/VERSION")"
+
+DO_UPDATE="auto"
+for a in "$@"; do
+  case "$a" in
+    --version|-h|--help)
+      exec "$BIN/halo3-launcher" "$@"
+      ;;
+    --update)
+      DO_UPDATE="force"
+      ;;
+    --no-update)
+      DO_UPDATE="no"
+      ;;
+  esac
+done
+
+check_and_apply_update() {
+  local mode="$1"
+  [[ "$mode" == "no" ]] && return 0
+  [[ "${HALO3_NO_UPDATE:-0}" == "1" && "$mode" != "force" ]] && return 0
+  [[ "${HALO3_WINDOW:-1}" == "0" && "$mode" != "force" ]] && return 0
+  [[ -n "${FLATPAK_ID:-}" || -e /.flatpak-info ]] && return 0
+  local version_pattern='v?([0-9]+)\.([0-9]+)\.([0-9]+)(-([0-9]+)-g[0-9a-fA-F]+)?(-dirty)?'
+  [[ "$LOCAL_VERSION" =~ ^$version_pattern$ ]] || return 0
+  command -v curl python3 sha256sum flock >/dev/null 2>&1 || return 0
+
+  local dir original_id
+  dir="$(dirname -- "${APPIMAGE:-.}")"
+  if [[ ! -f "${APPIMAGE:-}" || -L "$APPIMAGE" || ! -w "$APPIMAGE" || ! -w "$dir" || ! -x "$dir" ]]; then
+    if [[ "$mode" == "force" ]]; then
+      echo "halo3: cannot self-update (a writable AppImage and parent directory are required)" >&2
+    fi
+    return 0
+  fi
+  original_id="$(stat -Lc '%d:%i' -- "$APPIMAGE" 2>/dev/null)" || return 0
+
+  local repo="${HALO3_UPDATE_REPO:-summers-aaron/halo-3}"
+  local api_url="${HALO3_UPDATE_API_URL:-https://api.github.com/repos/${repo}/releases/latest}"
+  local token="${HALO3_UPDATE_TOKEN:-${HALO3_GITHUB_TOKEN:-${GITHUB_TOKEN:-}}}"
+  local protocols='=https' asset_url_key=browser_download_url
+  local curl_auth=()
+  [[ "$api_url" == http://* ]] && protocols='=http,https'
+  if [[ -n "$token" && "$api_url" == https://api.github.com/* ]]; then
+    curl_auth=(-H "Authorization: Bearer $token")
+    asset_url_key=url
+  fi
+  local curl_opts=(-q -fsSL --globoff --proto "$protocols" --proto-redir "$protocols"
+    --connect-timeout 2 -H "User-Agent: halo3-pc-updater" "${curl_auth[@]}")
+
+  local json parsed
+  json="$(curl "${curl_opts[@]}" --max-time 5 --max-filesize 1048576 \
+    -H "Accept: application/vnd.github+json" -- "$api_url" 2>/dev/null)" || return 0
+
+  # Compare the numeric tag and commit distance. Builds without an ordered
+  # version cannot safely be replaced, and dirty builds keep their base order.
+  parsed="$(python3 -c '
+import json
+import re
+import sys
+
+def version(text):
+    match = re.fullmatch(sys.argv[3], text)
+    if match:
+        major, minor, patch, _, distance, _ = match.groups()
+        return int(major), int(minor), int(patch), int(distance or 0)
+
+release = json.load(sys.stdin)
+tag = release["tag_name"]
+current, latest = version(sys.argv[1]), version(tag)
+if current is None or latest is None or latest <= current:
+    sys.exit(1)
+
+url_key = sys.argv[2]
+assets = {asset["name"]: asset for asset in release["assets"]}
+urls = [assets[name][url_key] for name in ("Halo3-x86_64.AppImage", "Halo3-x86_64.AppImage.sha256")]
+for url in urls:
+    if not re.fullmatch(r"https?://[^\s\x00-\x1f\x7f]+", url):
+        sys.exit(1)
+    if url_key == "url" and not url.startswith("https://api.github.com/"):
+        sys.exit(1)
+print(tag, *urls, sep="\n")
+' "$LOCAL_VERSION" "$asset_url_key" "$version_pattern" <<< "$json" 2>/dev/null)" || return 0
+  local release=()
+  mapfile -t release <<< "$parsed"
+
+  if ! (
+    # Lock the current inode, and confirm another launcher did not replace it
+    # while the API request was in flight.
+    flock -n 9 && [[ "$APPIMAGE" -ef /proc/self/fd/9 ]] &&
+      [[ "$(stat -Lc '%d:%i' -- "$APPIMAGE")" == "$original_id" ]] || exit 1
+
+    checksum="$(curl "${curl_opts[@]}" --max-time 5 --max-filesize 4096 \
+      -H "Accept: application/octet-stream" -- "${release[2]}")" || exit 1
+    [[ "$checksum" != *$'\n'* ]] || exit 1
+    read -r expected _ <<< "${checksum%$'\r'}"
+    [[ "$expected" =~ ^[[:xdigit:]]{64}$ ]] || exit 1
+    expected="${expected,,}"
+
+    # A release whose tag differs from the version stamped into its payload
+    # can still be recognized by its checksum on the next launch.
+    current="$(sha256sum <&9)" || exit 1
+    [[ "${current%% *}" != "$expected" ]] || exit 1
+
+    tmp_app="$(mktemp -- "$dir/.Halo3-update.XXXXXXXX")" || exit 1
+    trap 'rm -f -- "$tmp_app"' EXIT
+    curl "${curl_opts[@]}" --max-time 120 -H "Accept: application/octet-stream" \
+      -o "$tmp_app" -- "${release[1]}" || exit 1
+    actual="$(sha256sum < "$tmp_app")" || exit 1
+    [[ "${actual%% *}" == "$expected" && "$APPIMAGE" -ef /proc/self/fd/9 ]] || exit 1
+    chmod --reference=/proc/self/fd/9 -- "$tmp_app" && mv -fT -- "$tmp_app" "$APPIMAGE"
+  ) 2>/dev/null 9< "$APPIMAGE"; then
+    return 0
+  fi
+
+  echo "==> Updated to ${release[0]}! Relaunching..."
+  local a relaunch_args=()
+  for a in "${ORIG_ARGS[@]}"; do
+    [[ "$a" == "--update" ]] && continue
+    relaunch_args+=("$a")
+  done
+  export HALO3_NO_UPDATE=1
+  exec "$APPIMAGE" "${relaunch_args[@]}"
+}
+
+check_and_apply_update "$DO_UPDATE"
+exec "$BIN/halo3-launcher" "$@"

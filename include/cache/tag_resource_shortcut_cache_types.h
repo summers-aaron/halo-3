@@ -1,0 +1,6 @@
+#ifndef CACHE_TAG_RESOURCE_SHORTCUT_CACHE_TYPES_H
+#define CACHE_TAG_RESOURCE_SHORTCUT_CACHE_TYPES_H
+
+struct s_tag_resource_shortcut_cache { long tags[64]; };
+
+#endif // CACHE_TAG_RESOURCE_SHORTCUT_CACHE_TYPES_H

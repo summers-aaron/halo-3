@@ -1,0 +1,91 @@
+# port/build/cross-unit-inline.txt: game functions defined `inline` (or `__forceinline`, which the PC build spells
+# `inline`) in one unit's .cpp and called from other units. The Xbox build links them with LTCG; on the PC the defining
+# unit emits a COMDAT copy the others link to (CMakeLists.txt, halo3_defines). That holds at -O0, where every call stays
+# a call; with optimization the defining unit inlines all its own calls and drops the copy, and the other units'
+# references would fall to link-stage1's stubs. Each name here (its MS-mangled, IR spelling) is kept out of line in its
+# defining unit (LLVM ForceFunctionAttrs: -mllvm -force-attribute=<name>:noinline), so the copy is emitted at any
+# optimization level; a name a unit does not define changes nothing there. The proper fix is a game change (define
+# these in headers, or not inline): GAME-CHANGES F80.
+#
+# Regenerate after upstream merges: build build-pc/lin at -O0 and -O2 without this list, take the function stubs of each
+# link (stubgen's stubs.tsv, `function` rows) and list the -O2 ones the -O0 link does not have.
+??0c_network_channel@@QAE@XZ
+??0hkBvTreeAgent@@QAE@PAVhkContactMgr@@@Z
+??0hkCriticalSection@@QAE@H@Z
+??0phys_simplex_agent@@IAE@ABVphys_collision_proxy@@0PAVphys_contact_manager@@@Z
+??0hkListShape@@QAE@VhkFinishLoadedObjectFlag@@@Z
+??0s_bitmap_widget_block@@QAE@XZ
+??0s_core_widget_definition@@QAE@XZ
+??4hkMotionState@@QAEAAV0@ABV0@@Z
+?addConstraintInfo@hkConstraintOwner@@QAEXPAVhkConstraintInstance@@AAUhkConstraintInfo@@@Z
+?add_message@?$t_message_queue@Us_object_render_thread_message@@$0IAA@@@QAEXPBUs_object_render_thread_message@@@Z
+?and_with@flags256@@QAEXPBU1@@Z
+?animation_mask_node_flags@@YAXPAUs_node_flag_sets@@PBUflags256@@@Z
+?animation_node_flags_are_empty@@YA_NPBUflags256@@@Z
+atmosphere_query_sky_sun_parameters
+beam_gpu_reset_buffer_allocation
+?bitstream_decode_unit_vector@@YAXJPATreal_vector3d@@@Z
+cache_file_tag_resource_sort_adjust_heap
+?clear@?$t_message_queue@Us_effect_message@@$0CAA@@@QAEXXZ
+?clear@?$t_message_queue@Us_object_render_thread_message@@$0IAA@@@QAEXXZ
+?clear@?$t_message_queue@Vc_decal_message_union@@$0BAA@@@QAEXXZ
+content_catalogue_enumeration_is_complete
+content_catalogue_has_pending_tasks
+content_catalogue_has_storage_device
+?down_frames@c_abstract_button@@QBEEXZ
+?down_msec@c_abstract_button@@QAEGXZ
+?fast_normalize3d@@YAPATreal_vector3d@@PAT1@@Z
+?freeMemory@Rep@hkString@@QAEXXZ
+?generate_random_seed@@YAKXZ
+?get_constraint_pivots@c_havok_component@@QAEXJPATreal_point3d@@0@Z
+?get_default_texture_rasterizer_texture_ref@c_rasterizer_globals@@QBE?BVc_rasterizer_texture_ref@@J@Z
+?get_impact_count@c_havok_component@@QBEJXZ
+?get_index_allocator@c_decal@@ABEPAVc_index_allocator@1@XZ
+?get_is_transparent@c_render_method@@SA_NJ@Z
+?get_maximum_player_count@c_hopper_configuration@@QBEJXZ
+?get_maximum_shield_vitality@c_player_trait_shield_vitality@@QBEMXZ
+?get_maximum_team_imbalance@c_hopper_configuration@@QBEJXZ
+?get_maximum_team_size@c_hopper_configuration@@QBEJXZ
+?get_sector_flags_normal@@YAXJPATreal_vector3d@@@Z
+?get_team_count@c_hopper_configuration@@QBEJXZ
+?get_vertex_allocator@c_decal@@ABEPAVc_vertex_allocator@1@XZ
+gui_pregame_lobby_get_current_map_id
+gui_pregame_lobby_get_current_variant
+?half_to_real@@YAMG@Z
+?interpolate_scalar@@YAXPAMMM@Z
+?length@?$c_static_wchar_string@$0BA@@@QBEJXZ
+?network_session_interface_identifier_provider@@YAP6APBUs_player_identifier@@J@ZXZ
+?normalize2d@@YAMPATreal_vector2d@@@Z
+normalize3d
+?normalize3d@@YAMPATreal_vector3d@@@Z
+?normalize_and_clamp_linear@@YAMMMM_N@Z
+particle_gpu_reset_data_allocator
+particle_gpu_reset_storage_allocator
+?paused@c_animation_channel@@QBE_NXZ
+?project_point2d@@YAPATreal_point3d@@PBTreal_point2d@@PBUreal_plane3d@@F_NPAT1@@Z
+rasterizer_main_dispose_contrail_frame_vertex_buffer
+rasterizer_main_dispose_contrail_spawn_buffers
+rasterizer_main_dispose_contrail_vertex_buffer
+rasterizer_main_dispose_particle_spawn_table
+rasterizer_main_dispose_particle_vertex_buffer
+rasterizer_set_alpha_test_enabled
+rasterizer_set_mesh_part_state
+?real_rectangle3d_enclose_point@@YAPATreal_rectangle3d@@PAT1@PBTreal_point3d@@@Z
+?render_decorators@c_structure_renderer@@SAXXZ
+?set@?$c_generic_network_session_parameter@J@@QAE_NPBJ@Z
+?set@?$c_static_wchar_string@$0BAA@@@QAEXPB_W@Z
+?set@?$c_static_wchar_string@$0EAA@@@QAEXPB_W@Z
+?setAngularVelocity@hkRigidBody@@QAEXABVhkVector4@@@Z
+?set_bit@?$c_synchronized_bitvector@$0CAA@@@QAEXJ_N@Z
+?set_defaults@s_animation_control_data@@QAEXXZ
+?setLinearVelocity@hkRigidBody@@QAEXABVhkVector4@@@Z
+simulation_game_dispose_first_static_definition
+simulation_game_dispose_fourth_static_definition
+simulation_game_dispose_second_static_definition
+simulation_game_dispose_third_static_definition
+simulation_sandbox_engine_globals_instance_dispose
+?snapSimulateTimeAndGetTimeToAdvanceTo@hkSimulation@@IAEMXZ
+?unit_check_ping_thresholds@@YAXJMMPAJ@Z
+?valid_real_normal3d@@YA_NPBTreal_vector3d@@@Z
+?valid_real_point3d@@YA_NPBTreal_point3d@@@Z
+?vector_intersect_plane3d@@YAMPBTreal_point3d@@PBTreal_vector3d@@PBUreal_plane3d@@@Z

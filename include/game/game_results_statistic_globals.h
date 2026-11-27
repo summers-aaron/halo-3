@@ -1,0 +1,16 @@
+#ifndef GAME_GAME_RESULTS_STATISTIC_GLOBALS_H
+#define GAME_GAME_RESULTS_STATISTIC_GLOBALS_H
+
+#include "game/game_results_types.h"
+#include "game/game_results_player_vs_player_statistic_types.h"
+
+struct s_integer_statistic_definition;
+
+// Defined in tu/blamlibxbox/game_results.cpp.
+extern s_integer_statistic_definition g_game_results_statistic_definitions[k_game_results_statistic_count];
+extern s_integer_statistic_definition g_game_results_damage_statistic_definitions[5];
+extern s_integer_statistic_definition g_game_results_player_vs_player_statistic_definitions[k_game_results_player_vs_player_statistic_count];
+extern s_integer_statistic_definition g_game_results_medal_statistic_definitions[58];
+extern s_integer_statistic_definition g_game_results_achievement_statistic_definitions[49];
+
+#endif // GAME_GAME_RESULTS_STATISTIC_GLOBALS_H

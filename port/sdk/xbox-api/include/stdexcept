@@ -1,0 +1,83 @@
+// Halo 3 PC port: clean-room Xbox 360 SDK headers (zero-XDK build).
+// stdexcept: std::logic_error and the length_error / out_of_range errors the string library reports; each keeps
+// its message in a std::string.
+#pragma once
+#ifndef _STDEXCEPT_
+#define _STDEXCEPT_
+#include <exception>
+#include <xstring>
+
+#pragma pack(push, _CRT_PACKING)
+
+_STD_BEGIN
+
+class logic_error : public _XSTD exception
+{
+public:
+    explicit __CLR_OR_THIS_CALL logic_error(const string &message)
+        : _Str(message)
+    {
+    }
+
+    virtual __CLR_OR_THIS_CALL ~logic_error() _THROW0()
+    {
+    }
+
+    virtual const char *__CLR_OR_THIS_CALL what() const _THROW0()
+    {
+        return _Str.c_str();
+    }
+
+protected:
+    virtual void __CLR_OR_THIS_CALL _Doraise() const
+    {
+        _RAISE(*this);
+    }
+
+private:
+    string _Str;
+};
+
+class length_error : public logic_error
+{
+public:
+    explicit __CLR_OR_THIS_CALL length_error(const string &message)
+        : logic_error(message)
+    {
+    }
+
+    virtual __CLR_OR_THIS_CALL ~length_error() _THROW0()
+    {
+    }
+
+protected:
+    virtual void __CLR_OR_THIS_CALL _Doraise() const
+    {
+        _RAISE(*this);
+    }
+};
+
+class out_of_range : public logic_error
+{
+public:
+    explicit __CLR_OR_THIS_CALL out_of_range(const string &message)
+        : logic_error(message)
+    {
+    }
+
+    virtual __CLR_OR_THIS_CALL ~out_of_range() _THROW0()
+    {
+    }
+
+protected:
+    virtual void __CLR_OR_THIS_CALL _Doraise() const
+    {
+        _RAISE(*this);
+    }
+};
+
+_STD_END
+
+#pragma pack(pop)
+
+#endif // _STDEXCEPT_
