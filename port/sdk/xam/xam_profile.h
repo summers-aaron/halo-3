@@ -17,7 +17,7 @@
 #define PORT_PROFILE_OFFLINE_XUID 0xE000000000000001ull
 #define PORT_PROFILE_USERS 4u
 #define PORT_PROFILE_BUILTIN 4u        // "Player 1" .. "Player 4", catalog indices 0..3
-#define PORT_PROFILE_CATALOG_MAX 16u   // built-in and created profiles together
+#define PORT_PROFILE_CATALOG_MAX 64u   // built-in and created profiles together
 #define PORT_PROFILE_GAMERTAG_MAX 15u  // XUSER_MAX_NAME_LENGTH
 #define PORT_PROFILE_GUESTS 3u         // guests per sponsor
 

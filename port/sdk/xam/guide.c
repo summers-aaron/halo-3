@@ -2081,7 +2081,11 @@ static void error_notice(guide_pane *pane, const char *what, unsigned long error
     copy(pane->notice, sizeof(pane->notice), what);
     switch (error) {
     case 85: append(pane->notice, sizeof(pane->notice), ": that profile is signed in on another controller."); break;
-    case 68: append(pane->notice, sizeof(pane->notice), ": that profile has 3 guests already."); break;
+    case 68:
+        append(pane->notice, sizeof(pane->notice),
+               what[0] == 'C' && what[7] == 'c' ? ": maximum number of local profiles reached."
+                                                : ": that profile has 3 guests already.");
+        break;
     case 183: append(pane->notice, sizeof(pane->notice), ": a profile has that gamertag already."); break;
     case 123: append(pane->notice, sizeof(pane->notice), ": that gamertag cannot be used."); break;
     case 1317: append(pane->notice, sizeof(pane->notice), ": no profile is signed in to sponsor a guest."); break;
