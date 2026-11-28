@@ -37,6 +37,9 @@ int port_config_host_current_directory(char *path, unsigned long size)
 
 int port_config_host_display(void)
 {
+    const char *wayland = getenv("WAYLAND_DISPLAY");
+    if (wayland != 0 && wayland[0] != 0)
+        return 1;
     const char *display = getenv("DISPLAY");
     return display != 0 && display[0] != 0;
 }

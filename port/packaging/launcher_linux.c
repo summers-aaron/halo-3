@@ -760,7 +760,7 @@ static int check_setup_ready(char *reason, size_t reason_cap) {
     join_path(pe, PATH_CAP, g_cfg.data_dir, "default.pe");
     join_path(xex, PATH_CAP, g_cfg.disc_path, "default.xex");
     if (!valid_pe(pe) || file_is_newer(xex, pe) ||
-        strcmp(external_disc_path(g_cfg.disc_path), g_cfg.saved_disc_path) != 0) {
+        strcmp(external_disc_path(g_cfg.disc_path), external_disc_path(g_cfg.saved_disc_path)) != 0) {
         if (reason) snprintf(reason, reason_cap, "Updating retail executable data...");
         return 0;
     }
@@ -3184,18 +3184,22 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Preflight 2: XWayland check on pure Wayland sessions
-    if (!g_cfg.headless && (!getenv("DISPLAY") || !getenv("DISPLAY")[0]) &&
-        getenv("WAYLAND_DISPLAY") && getenv("WAYLAND_DISPLAY")[0]) {
-        show_fatal_error("Halo 3 - XWayland Required",
-                         "WAYLAND_DISPLAY is set, but DISPLAY is not set.\n"
-                         "Halo 3 currently opens an X11 window (via XWayland on Wayland desktops).");
+    // Preflight 2: Display server check when non-headless
+    const char *wl_env = getenv("WAYLAND_DISPLAY");
+    const char *x11_env = getenv("DISPLAY");
+    const char *backend_env = getenv("HALO3_WINDOW_BACKEND");
+    int force_x11 = backend_env && (strcmp(backend_env, "x11") == 0 || strcmp(backend_env, "xlib") == 0);
+    int has_wayland = !force_x11 && wl_env && wl_env[0] != 0;
+    int has_x11 = x11_env && x11_env[0] != 0;
+    if (!g_cfg.headless && force_x11 && !has_x11 && wl_env && wl_env[0] != 0) {
+        show_fatal_error("Halo 3 - X11 Display Required",
+                         "HALO3_WINDOW_BACKEND=x11 is set, but DISPLAY is not set.");
         return 1;
     }
 
     int ready = check_setup_ready(NULL, 0);
 
-    int can_gui = (!g_cfg.headless && getenv("DISPLAY") && getenv("DISPLAY")[0] != 0);
+    int can_gui = (!g_cfg.headless && has_x11);
 
     if (!can_gui) {
         if (!ready || g_cfg.odst_dlc_src[0]) {
@@ -3206,7 +3210,7 @@ int main(int argc, char **argv) {
     }
 
     int show_launcher = !ready || g_cfg.force_setup || g_cfg.odst_dlc_src[0] ||
-                        !g_cfg.skip_launcher || x11_shift_held();
+                        !g_cfg.skip_launcher || (!has_wayland && x11_shift_held());
 
     if (show_launcher) {
         int auto_start = 0;

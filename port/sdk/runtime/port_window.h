@@ -3,9 +3,10 @@
 
 /*
  * The game's one OS window (HALO3_WINDOW=1), for the Vulkan renderer to present into
- * (port/sdk/d3d/vulkan_device.cpp). Linux: Xlib, loaded at run time from libX11.so.6 (window_linux.c); Windows:
- * user32.dll, loaded at run time (window_windows.c). Neither adds a link-time library dependency, and a machine with
- * no display still starts (port_window_open fails and the renderer stays offscreen).
+ * (port/sdk/d3d/vulkan_device.cpp). Linux: native Wayland (libwayland-client.so.0) with Xlib fallback (libX11.so.6),
+ * loaded at run time (window_linux.c); Windows: user32.dll, loaded at run time (window_windows.c). None adds a
+ * link-time library dependency, and a machine with no display still starts (port_window_open fails and the renderer
+ * stays offscreen).
  */
 
 #ifdef __cplusplus
@@ -16,6 +17,7 @@ extern "C" {
 #define PORT_WINDOW_SYSTEM_NONE 0
 #define PORT_WINDOW_SYSTEM_WIN32 1
 #define PORT_WINDOW_SYSTEM_XLIB 2
+#define PORT_WINDOW_SYSTEM_WAYLAND 5
 
 /* The window system this build opens windows with. */
 int port_window_system(void);
@@ -23,7 +25,7 @@ int port_window_system(void);
  * HALO3_WINDOW_MODE: port_config.h). Returns 1 on success (the reason for a failure is logged through
  * port_write_error). One window at a time. */
 int port_window_open(const char *title, unsigned int width, unsigned int height);
-/* Native handles for the Vulkan surface: Xlib Display * and Window; Win32 HINSTANCE and HWND. */
+/* Native handles for the Vulkan surface: Wayland wl_display * and wl_surface *; Xlib Display * and Window; Win32 HINSTANCE and HWND. */
 void *port_window_native_display(void);
 __UINTPTR_TYPE__ port_window_native_window(void);
 /* Handles pending window events without blocking, and puts the window in the mode the settings ask for once the Guide

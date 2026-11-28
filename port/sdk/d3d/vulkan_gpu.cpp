@@ -1021,6 +1021,8 @@ gpu_result op_surface_create(s_gpu_backend *gpu, uint32_t window_system, void *d
         return gpu_result_of(vulkan_surface_create_win32(vk(gpu), display, (void *)window));
     case k_gpu_window_system_xcb:
         return gpu_result_of(vulkan_surface_create_xcb(vk(gpu), display, (uint32_t)window));
+    case k_gpu_window_system_wayland:
+        return gpu_result_of(vulkan_surface_create_wayland(vk(gpu), display, (void *)window));
     case k_gpu_window_system_headless:
         return gpu_result_of(vulkan_surface_create_headless(vk(gpu)));
     default:
@@ -1199,6 +1201,7 @@ extern "C" gpu_result vulkan_gpu_backend_create(const s_gpu_backend_create_info 
     create.window_system = info->window_system == k_gpu_window_system_win32     ? (uint32_t)k_vulkan_window_system_win32
                            : info->window_system == k_gpu_window_system_xlib     ? (uint32_t)k_vulkan_window_system_xlib
                            : info->window_system == k_gpu_window_system_xcb      ? (uint32_t)k_vulkan_window_system_xcb
+                           : info->window_system == k_gpu_window_system_wayland  ? (uint32_t)k_vulkan_window_system_wayland
                            : info->window_system == k_gpu_window_system_headless ? (uint32_t)k_vulkan_window_system_headless
                                                                                   : (uint32_t)k_vulkan_window_system_none;
     create.validation = info->validation;

@@ -856,7 +856,7 @@ static int check_setup_ready(wchar_t *reason_out, size_t reason_cap) {
     join_path(pe, PATH_CAP, g_cfg.data_dir, L"default.pe");
     join_path(xex, PATH_CAP, g_cfg.disc_path, L"default.xex");
     if (!valid_pe(pe) || file_is_newer(xex, pe) ||
-        _wcsicmp(external_disc_path(g_cfg.disc_path), g_cfg.saved_disc_path) != 0) {
+        _wcsicmp(external_disc_path(g_cfg.disc_path), external_disc_path(g_cfg.saved_disc_path)) != 0) {
         if (reason_out) format_wide(reason_out, reason_cap, L"Updating retail executable data...");
         return 0;
     }

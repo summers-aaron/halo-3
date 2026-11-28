@@ -309,6 +309,7 @@ static const char *window_system_extension(uint32_t window_system)
     case k_vulkan_window_system_win32: return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
     case k_vulkan_window_system_xlib: return VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
     case k_vulkan_window_system_xcb: return VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+    case k_vulkan_window_system_wayland: return VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
     case k_vulkan_window_system_headless: return VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME;
     default: return 0;
     }
@@ -5413,6 +5414,18 @@ extern "C" VkResult vulkan_surface_create_xcb(s_vulkan_backend *backend, void *c
     create.window = window;
     return surface_created(backend, backend->vk.vkCreateXcbSurfaceKHR(backend->instance, &create, 0, &backend->surface),
                            "vkCreateXcbSurfaceKHR");
+}
+
+extern "C" VkResult vulkan_surface_create_wayland(s_vulkan_backend *backend, void *display, void *surface)
+{
+    if (!surface_available(backend, k_vulkan_window_system_wayland, backend->vk.vkCreateWaylandSurfaceKHR != 0))
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    VkWaylandSurfaceCreateInfoKHR create = {};
+    create.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    create.display = (struct wl_display *)display;
+    create.surface = (struct wl_surface *)surface;
+    return surface_created(backend, backend->vk.vkCreateWaylandSurfaceKHR(backend->instance, &create, 0, &backend->surface),
+                           "vkCreateWaylandSurfaceKHR");
 }
 
 extern "C" VkResult vulkan_surface_create_headless(s_vulkan_backend *backend)
