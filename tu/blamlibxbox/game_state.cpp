@@ -294,6 +294,40 @@ static __forceinline s_game_state_header *game_state_current_header()
     return (s_game_state_header *)game_state_globals.current_state;
 }
 
+#ifdef HALO3_64BIT
+extern "C" char g_main_save_map_enabled;
+extern "C" void saved_game_files_prepare_async_autosave(const game_state_header *header);
+extern "C" bool saved_game_files_has_prepared_async_autosave(void);
+extern "C" void saved_game_files_cancel_async_autosave(void);
+extern "C" bool saved_game_files_start_async_autosave_commit(const void *hashed_buffer);
+extern "C" bool saved_game_files_is_async_autosave_commit_done(void);
+extern "C" void saved_game_files_finish_async_autosave(void);
+extern "C" void saved_game_files_delete_campaign_session_saved_game_state(const game_options *options);
+
+static bool g_game_state_checkpoint_autosave_armed = false;
+static bool g_game_state_autosave_rollback_pending = false;
+
+static bool game_state_should_autosave_checkpoint(void)
+{
+    return !game_is_cooperative()
+        && g_main_save_map_enabled != 0
+        && tls_game_globals()->options.game_mode == 1
+        && (!game_campaign_has_multiple_players() || network_squad_session_get_peer_count() <= 1);
+}
+
+extern "C" void game_state_set_checkpoint_autosave_armed(bool armed)
+{
+    g_game_state_checkpoint_autosave_armed = armed;
+}
+
+extern "C" void game_state_delete_campaign_session_autosave(const game_options *options)
+{
+    if (g_game_state_async_file_state.async_save_address != 0)
+        game_state_wait_for_async_save(g_game_state_async_file_state.async_save_address);
+    saved_game_files_delete_campaign_session_saved_game_state(options);
+}
+#endif
+
 void game_state_initialize_for_new_map()
 {
     game_state_reset_mapping(0);
@@ -311,6 +345,10 @@ void game_state_initialize_for_new_map()
     game_state_current_header()->checksum = crc_checksum_buffer(-1, &g_cache_file_globals.header.digest.hashes[2], sizeof(s_network_http_request_hash));
     memcpy(&game_state_current_header()->game_options, &tls_game_globals()->options, sizeof(game_options));
     game_state_globals.loaded_from_persistent_storage = false;
+#ifdef HALO3_64BIT
+    g_game_state_checkpoint_autosave_armed = false;
+    g_game_state_autosave_rollback_pending = false;
+#endif
 }
 
 void game_state_initialize_for_new_structure_bsp(unsigned long bsp_index)
@@ -395,6 +433,21 @@ void game_state_save()
     game_state_unlock_and_resume_render_thread(0x200);
     game_state_globals.active = true;
     memcpy(&game_state_globals.headers[game_state_globals.index], game_state_globals.current_state, sizeof(game_state_globals.headers[0]));
+#ifdef HALO3_64BIT
+    if (g_game_state_async_file_state.storage_mode == 1
+        && g_game_state_checkpoint_autosave_armed
+        && g_game_state_async_file_state.memory_save_valid
+        && game_state_should_autosave_checkpoint())
+    {
+        saved_game_files_write_saved_game_state(
+            (const game_state_header *)g_game_state_async_file_state.memory_save_address,
+            sizeof(game_state_header),
+            g_game_state_async_file_state.memory_save_address,
+            k_game_state_file_size);
+    }
+    g_game_state_checkpoint_autosave_armed = false;
+    g_game_state_autosave_rollback_pending = false;
+#endif
     main_time_reset();
     players_update_for_checkpoint();
     main_set_idle_recursion(0);
@@ -402,6 +455,15 @@ void game_state_save()
 
 void game_state_prepare_for_revert()
 {
+#ifdef HALO3_64BIT
+    if (!game_campaign_is_multiplayer()
+        && (tls_game_globals()->options.primary_skulls & 1u) != 0
+        && game_state_should_autosave_checkpoint())
+    {
+        game_state_delete_campaign_session_autosave(&tls_game_globals()->options);
+        return;
+    }
+#endif
     if (game_state_globals.active && game_state_globals.pending &&
         (float)(unsigned long)(game_time_globals->time - game_state_globals.last_time) * game_time_globals->tick_length < 8.0f)
     {
@@ -411,6 +473,9 @@ void game_state_prepare_for_revert()
         game_state_globals.active = true;
         game_state_globals.pending = false;
         game_state_globals.index = (game_state_globals.index + 1) % game_state_globals.size;
+#ifdef HALO3_64BIT
+        g_game_state_autosave_rollback_pending = true;
+#endif
         return;
     }
     game_state_globals.count = 0;
@@ -624,6 +689,32 @@ void game_state_set_revert_time(long)
 bool game_state_saved_game_matches_session(const game_state_header *header)
 {
     bool result = false;
+#ifdef HALO3_64BIT
+    if (network_squad_session_get_peer_count() > 1)
+        return false;
+    long saved_player_count = 0;
+    for (long player_index = 0; player_index < 16; ++player_index)
+    {
+        if (header->game_options.players[player_index].valid)
+            ++saved_player_count;
+    }
+    long session_player_count = 0;
+    if (user_interface_squad_exists())
+    {
+        session_player_count = user_interface_squad_get_player_count();
+    }
+    else
+    {
+        const game_options &active_options = tls_game_globals()->options;
+        for (long player_index = 0; player_index < 16; ++player_index)
+        {
+            if (active_options.players[player_index].valid)
+                ++session_player_count;
+        }
+    }
+    if (saved_player_count < 1 || saved_player_count != session_player_count)
+        return false;
+#endif
     e_campaign_id campaign_id;
     e_map_id map_id;
     if (network_life_cycle_session_get_map(&campaign_id, &map_id))
@@ -893,7 +984,12 @@ void game_state_update_async_save(void *)
             &g_game_state_async_file_state.hash_done, true);
         g_game_state_async_file_state.async_task_id = result;
         if (result == -1)
+        {
+#ifdef HALO3_64BIT
+            saved_game_files_cancel_async_autosave();
+#endif
             finished = 1;
+        }
         break;
     }
     case 3:
@@ -926,10 +1022,36 @@ void game_state_update_async_save(void *)
             __lwsync();
             g_game_state_async_file_state.slot_valid[g_game_state_async_file_state.save_slot] =
                 (g_game_state_async_file_state.save_buffer_size - written == 0);
+#ifdef HALO3_64BIT
+            if (g_game_state_async_file_state.slot_valid[g_game_state_async_file_state.save_slot]
+                && saved_game_files_has_prepared_async_autosave())
+            {
+                if (saved_game_files_start_async_autosave_commit(g_game_state_async_file_state.async_save_address))
+                {
+                    g_game_state_async_file_state.async_save_state = 5;
+                    break;
+                }
+            }
+            else
+            {
+                saved_game_files_cancel_async_autosave();
+            }
+#endif
             finished = 1;
         }
         break;
     }
+#ifdef HALO3_64BIT
+    case 5:
+    {
+        if (saved_game_files_is_async_autosave_commit_done())
+        {
+            saved_game_files_finish_async_autosave();
+            finished = 1;
+        }
+        break;
+    }
+#endif
     default:
         finished = 1;
         break;
@@ -992,6 +1114,12 @@ extern "C" void game_state_save_async(int p0)
         _InterlockedExchange(&g_game_state_async_file_state.bytes_written.value, 0);
         memcpy(g_game_state_async_file_state.async_save_address,
             g_game_state_async_file_state.primary_buffer_address, g_game_state_async_file_state.save_buffer_size);
+#ifdef HALO3_64BIT
+        if (g_game_state_checkpoint_autosave_armed && game_state_should_autosave_checkpoint())
+            saved_game_files_prepare_async_autosave((const game_state_header *)g_game_state_async_file_state.primary_buffer_address);
+        else
+            saved_game_files_cancel_async_autosave();
+#endif
         g_game_state_async_file_state.async_save_state = 2;
         game_state_update_async_save(g_game_state_async_file_state.async_save_address);
         return;
@@ -1006,6 +1134,18 @@ extern "C" void game_state_save_async(int p0)
         flags, 8, 6, true, &bytes_written, &done);
     async_block_until_done(&done, simple_yield_function, 1, 0, 0, 0);
     g_game_state_async_file_state.slot_valid[p0] = (bytes_written.peek() == g_game_state_async_file_state.save_buffer_size);
+#ifdef HALO3_64BIT
+    if (g_game_state_async_file_state.slot_valid[p0]
+        && g_game_state_checkpoint_autosave_armed
+        && game_state_should_autosave_checkpoint())
+    {
+        saved_game_files_write_saved_game_state(
+            (const game_state_header *)g_game_state_async_file_state.primary_buffer_address,
+            sizeof(s_game_state_header),
+            g_game_state_async_file_state.primary_buffer_address,
+            k_game_state_file_size);
+    }
+#endif
 }
 
 // @address 0x75dd64 ?g_game_state_load_listener@@3Vc_game_state_load_listener@@A
@@ -1288,6 +1428,22 @@ void game_state_revert(unsigned long flags)
         main_globals.reset_map = true;
         main_globals.reset_map_parameter = false;
     }
+#ifdef HALO3_64BIT
+    if (g_game_state_autosave_rollback_pending)
+    {
+        g_game_state_autosave_rollback_pending = false;
+        if (reverted && main_globals.shutdown_requested == 0 && game_state_should_autosave_checkpoint())
+        {
+            game_state_lock_and_halt_render_thread(0);
+            saved_game_files_write_saved_game_state(
+                (const game_state_header *)&game_state_globals.headers[game_state_globals.index],
+                sizeof(s_game_state_header),
+                game_state_globals.game_state_buffer,
+                k_game_state_file_size);
+            game_state_unlock_and_resume_render_thread(0);
+        }
+    }
+#endif
 }
 
 // @address 0x19be58 game_state_prepare_game_from_header
@@ -1404,6 +1560,13 @@ extern "C" void game_state_process_pending_changes()
                 if (screen != 0)
                     screen->transition_out_with_transition_type(0, _screen_transition_normal);
             } else {
+#ifdef HALO3_64BIT
+                if (tls_game_globals()->options.game_mode == 1
+                    && (!game_campaign_has_multiple_players() || network_squad_session_get_peer_count() <= 1))
+                {
+                    game_state_delete_campaign_session_autosave(&tls_game_globals()->options);
+                }
+#endif
                 bool advanced_to_next_level = false;
                 if (simulation_starting_up() && tls_game_globals()->options.game_mode == 1)
                     advanced_to_next_level = main_game_goto_next_level();

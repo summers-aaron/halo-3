@@ -171,19 +171,67 @@ static __forceinline long gui_screen_main_menu_signed_in_count()
     return signed_in_count;
 }
 
+#ifdef HALO3_64BIT
+extern "C" unsigned long g_saved_game_personal_storage_generation;
+extern "C" bool saved_game_files_read_game_options_for_player_count(
+    e_controller_index controller_index, long player_count, game_options *options);
+
+static long g_main_menu_last_signed_in_count = -1;
+static unsigned long g_main_menu_last_storage_generation = 0;
+
+static e_controller_index gui_screen_main_menu_find_resume_controller(
+    e_controller_index preferred_controller,
+    game_options *out_options)
+{
+    long signed_in_count = gui_screen_main_menu_signed_in_count();
+    if (signed_in_count < 1 || signed_in_count > 4)
+        return k_no_controller;
+
+    game_options local_options;
+    game_options *target_options = out_options ? out_options : &local_options;
+
+    if ((unsigned long)preferred_controller < 4 &&
+        controller_in_use(controller_get(preferred_controller)) &&
+        saved_game_files_get_personal_storage_content_item(preferred_controller, false) != -1 &&
+        saved_game_files_read_game_options_for_player_count(preferred_controller, signed_in_count, target_options))
+    {
+        return preferred_controller;
+    }
+
+    for (long i = 0; i < 4; ++i) {
+        e_controller_index ctrl = (e_controller_index)i;
+        if (ctrl == preferred_controller)
+            continue;
+        if (controller_in_use(controller_get(ctrl)) &&
+            saved_game_files_get_personal_storage_content_item(ctrl, false) != -1 &&
+            saved_game_files_read_game_options_for_player_count(ctrl, signed_in_count, target_options))
+        {
+            return ctrl;
+        }
+    }
+    return k_no_controller;
+}
+#endif
+
 // 0x4a8c18: main menu post-initialize helper
 // @address 0x4a8c18 ?update_main_menu@c_main_menu_screen_widget@@QAAXXZ
 void c_main_menu_screen_widget::update_main_menu()
 {
+    bool has_storage = false;
     for (long i = 0; i < this->m_datasource_count; i++) {
         if (this->m_datasource[i]->get_name() == _main_menu_string_main_menu) {
             c_gui_data *menu = this->m_datasource[i];
             if (menu) {
-                bool has_storage = false;
+#ifdef HALO3_64BIT
+                g_main_menu_last_signed_in_count = gui_screen_main_menu_signed_in_count();
+                g_main_menu_last_storage_generation = g_saved_game_personal_storage_generation;
+                has_storage = (gui_screen_main_menu_find_resume_controller(k_no_controller, 0) != k_no_controller);
+#else
                 e_controller_index controller_index = k_no_controller;
                 if (this->get_signed_in_controller_count(&controller_index) == 1
                     && saved_game_files_get_personal_storage_content_item(controller_index, false) != -1)
                     has_storage = true;
+#endif
                 menu->clear_disabled_elements();
                 if (has_storage)
                     menu->set_disabled_element(_main_menu_string_name, _main_menu_string_start_new_campaign);
@@ -212,7 +260,11 @@ void c_main_menu_screen_widget::update_main_menu()
         c_gui_widget *target = gui_widget_find_child_by_name(child, 5);
         if (target) {
             long signed_in_count = gui_screen_main_menu_signed_in_count();
+#ifdef HALO3_64BIT
+            gui_widget_set_alternate_state(target, !has_storage && signed_in_count > 1);
+#else
             gui_widget_set_alternate_state(target, signed_in_count > 1);
+#endif
         }
     }
 }
@@ -234,6 +286,14 @@ void c_main_menu_screen_widget::update(unsigned long current_milliseconds)
         memcpy(this->block, identifiers, sizeof(identifiers));
         dirty = true;
     }
+#ifdef HALO3_64BIT
+    long current_signed_in_count = gui_screen_main_menu_signed_in_count();
+    if (current_signed_in_count != g_main_menu_last_signed_in_count ||
+        g_saved_game_personal_storage_generation != g_main_menu_last_storage_generation)
+    {
+        dirty = true;
+    }
+#endif
 
     bool locked_down = g_user_interface_is_alpha && (!g_network_configuration.alpha_locked_down || !g_eula_accepted);
     if (locked_down && !get_alpha_is_internal()) {
@@ -446,6 +506,45 @@ bool c_main_menu_screen_widget::handle_list_item_chosen(
             case _main_menu_string_resume_campaign:
                 if (!this->m_catalogues_busy) {
                     global_preferences_set_last_menu_selection(value);
+#ifdef HALO3_64BIT
+                    long signed_in_count = gui_screen_main_menu_signed_in_count();
+                    if (signed_in_count >= 1 && signed_in_count <= 4) {
+                        e_controller_index caller_ctrl = (e_controller_index)message->m_controller;
+                        if ((unsigned long)caller_ctrl < 4 && controller_in_use(controller_get(caller_ctrl))) {
+                            game_options options;
+                            e_controller_index save_controller =
+                                gui_screen_main_menu_find_resume_controller(caller_ctrl, &options);
+                            if (save_controller != k_no_controller) {
+                                if (!gui_screen_main_menu_check_blocked()) {
+                                    e_controller_index start_controller = save_controller;
+                                    for (long i = 0; i < 4; ++i) {
+                                        if (controller_in_use(controller_get((e_controller_index)i))) {
+                                            start_controller = (e_controller_index)i;
+                                            break;
+                                        }
+                                    }
+                                    s_gui_game_setup_storage setup;
+                                    global_preferences_get_last_game_setup(&setup);
+                                    setup.campaign_settings.valid = true;
+                                    setup.campaign_settings.difficulty_level = options.campaign_difficulty;
+                                    setup.campaign_settings.campaign_id = options.campaign_id;
+                                    setup.campaign_settings.map_id = options.map_id;
+                                    global_preferences_set_last_game_setup(&setup);
+                                    gui_screen_main_menu_set_campaign_controller(save_controller);
+                                    if (gui_pregame_setup_manager_initialize_squad_for_mode(0)) {
+                                        g_user_interface_networking_globals.start_pending = true;
+                                        g_user_interface_networking_globals.start_controller = start_controller;
+                                        g_user_interface_networking_globals.start_state = 1;
+                                    }
+                                }
+                            } else {
+                                g_gui_error_manager.post_error_with_custom_message(0x2000b, 0, 0, message->m_controller, false, true);
+                            }
+                        }
+                    } else {
+                        g_gui_error_manager.post_error_with_custom_message(0x2000c, 0, 0, message->m_controller, false, true);
+                    }
+#else
                     e_controller_index first_controller;
                     if (this->get_signed_in_controller_count(&first_controller) == 1) {
                         e_controller_index controller = first_controller;
@@ -474,6 +573,7 @@ bool c_main_menu_screen_widget::handle_list_item_chosen(
                     } else {
                         g_gui_error_manager.post_error_with_custom_message(0x2000c, 0, 0, message->m_controller, false, true);
                     }
+#endif
                 } else {
                     user_interface_play_sound(_ui_sound_error, -1);
                 }
