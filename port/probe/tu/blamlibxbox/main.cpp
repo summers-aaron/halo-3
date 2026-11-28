@@ -2640,9 +2640,14 @@ char g_main_save_map_enabled = 1;
 
 
 }
+extern "C" long network_squad_session_get_peer_count(void);
+extern "C" void game_state_set_checkpoint_autosave_armed(bool armed);
+
 static __forceinline bool main_save_map_should_write_state()
 {
-    return tls_game_globals()->options.game_mode == 1 && game_campaign_has_multiple_players() == false;
+    return tls_game_globals()->options.game_mode == 1
+        && !(tls_game_globals()->lost && !game_campaign_is_multiplayer() && (tls_game_globals()->options.primary_skulls & 1u) != 0)
+        && (game_campaign_has_multiple_players() == false || network_squad_session_get_peer_count() <= 1);
 }
 // @address 0x1aa0f0 ?main_save_map_and_exit_private@@YAXXZ
 void main_save_map_and_exit_private()
@@ -3168,6 +3173,7 @@ void main_loop_process_global_state_changes()
         chud_messaging_special_save(false);
         if (game_in_progress())
         {
+            game_state_set_checkpoint_autosave_armed(true);
             game_state_save();
             c_datamine event(0, "checkpoint save", 1, "main");
         }

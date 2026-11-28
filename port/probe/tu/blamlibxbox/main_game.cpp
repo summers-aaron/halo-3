@@ -790,6 +790,9 @@ void main_game_load_panic()
 }
 
 
+extern "C" long network_squad_session_get_peer_count(void);
+extern "C" void game_state_delete_campaign_session_autosave(const game_options *options);
+
 // @address 0x1e3358 ?main_game_reset_map@@YAX_N@Z
 void main_game_reset_map(bool reset_random_seed)
 {
@@ -800,6 +803,11 @@ void main_game_reset_map(bool reset_random_seed)
     players_detach_from_map();
     data_mine_insert_single_player_game_options("map reset");
     memcpy(&options, &tls_game_globals()->options, sizeof(game_options));
+    if (options.game_mode == 1 && !options.game_playback
+        && (!game_campaign_has_multiple_players() || network_squad_session_get_peer_count() <= 1))
+    {
+        game_state_delete_campaign_session_autosave(&options);
+    }
     if (reset_random_seed)
         options.random_seed = generate_random_seed();
     game_globals_storage *game_globals = tls_game_globals();
@@ -995,7 +1003,8 @@ bool main_game_change_immediate(const game_options *options)
                     data_mine_insert_single_player_game_options("game start");
                     if (options->game_mode == 1 && options->map_id != -1)
                         user_interface_set_last_campaign_level(options->campaign_id, options->map_id);
-                    if (!options->game_playback && !game_campaign_has_multiple_players())
+                    if (!options->game_playback
+                        && (!game_campaign_has_multiple_players() || network_squad_session_get_peer_count() <= 1))
                     {
                         long controller_index = g_user_interface_globals.active_controller.peek();
                         if (controller_index != -1)

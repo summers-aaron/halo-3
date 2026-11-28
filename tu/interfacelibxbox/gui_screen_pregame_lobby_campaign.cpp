@@ -217,8 +217,14 @@ long c_gui_screen_pregame_lobby_campaign::get_start_button_name()
 {
     bool resume = false;
     e_controller_index controller = user_interface_networking_get_saved_game_controller();
+#ifdef HALO3_64BIT
+    if ((unsigned long)controller <= 3 && m_player_count >= 1 && m_player_count <= 4 &&
+        user_interface_squad_get_local_player_count() == m_player_count)
+        resume = true;
+#else
     if ((unsigned long)controller <= 3 && m_player_count == 1)
         resume = gui_screen_pregame_lobby_campaign_controller_has_saved_game_state(controller);
+#endif
     return resume ? _pregame_lobby_campaign_string_start_campaign_resume : _pregame_lobby_campaign_string_start_campaign_new;
 }
 
@@ -255,11 +261,31 @@ void c_gui_screen_pregame_lobby_campaign::update(unsigned long milliseconds)
                 players.identifiers[player_index] = *identifier;
             }
         }
+#ifdef HALO3_64BIT
+        if (m_player_count != -1 &&
+            (player_count != m_player_count || memcmp(&players, &m_players, sizeof(players)) != 0))
+        {
+            if (player_count >= 1 && player_count <= 4 &&
+                user_interface_squad_get_local_player_count() == player_count)
+            {
+                global_preferences_get_mode_setup(&g_pregame_setup_manager, 0);
+                controller = user_interface_networking_get_saved_game_controller();
+                if (controller == _controller_index_none) {
+                    __lwsync();
+                    _InterlockedExchange(&g_user_interface_globals.active_controller.value, -1);
+                }
+            } else {
+                __lwsync();
+                _InterlockedExchange(&g_user_interface_globals.active_controller.value, -1);
+            }
+        }
+#else
         if (m_player_count != -1 && player_count == 1 && memcmp(&players, &m_players, sizeof(players)) != 0)
         {
             global_preferences_get_mode_setup(&g_pregame_setup_manager, 0);
             controller = controller_get_first_signed_in_controller();
         }
+#endif
         m_player_count = player_count;
         memcpy(&m_players, &players, sizeof(m_players));
     }

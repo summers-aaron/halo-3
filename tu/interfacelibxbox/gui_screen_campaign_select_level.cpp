@@ -308,13 +308,22 @@ static __forceinline bool gui_screen_campaign_select_level_handle_device_selecti
     return handled;
 }
 
+#ifdef HALO3_64BIT
+extern "C" bool user_interface_networking_has_matching_saved_game(e_controller_index fallback_controller);
+extern "C" void user_interface_networking_delete_squad_saved_games(e_controller_index fallback_controller);
+#endif
+
 // @address 0x4c45e0 ?handle_dialog_result@c_gui_screen_campaign_select_level@@UAA_NPBVc_dialog_result_message@@@Z
 bool c_gui_screen_campaign_select_level::handle_dialog_result(const c_dialog_result_message *message)
 {
     bool handled = false;
     if (message->m_dialog_name == _campaign_select_level_string_campaign_changing_setting_will_delete_saved_game) {
         if (message->m_dialog_result == 0) {
+#ifdef HALO3_64BIT
+            user_interface_networking_delete_squad_saved_games((e_controller_index)message->m_controller);
+#else
             saved_game_files_delete_personal_storage(message->m_controller);
+#endif
             gui_screen_campaign_select_level_handle_selection(this, message->m_controller);
         }
         handled = true;
@@ -436,9 +445,15 @@ bool c_gui_screen_campaign_select_level::handle_list_item_chosen(
             }
         }
     } else if (list_name == _campaign_select_level_string_insertion_point) {
-        bool single_player = (long)this->m_mode == 1 && user_interface_squad_get_player_count() == 1;
         e_controller_index controller = message->m_controller;
+#ifdef HALO3_64BIT
+        bool show_dialog = (long)this->m_mode == 1
+            && user_interface_squad_exists()
+            && user_interface_networking_has_matching_saved_game(controller);
+#else
+        bool single_player = (long)this->m_mode == 1 && user_interface_squad_get_player_count() == 1;
         bool show_dialog = single_player && gui_screen_campaign_select_level_controller_has_save(controller);
+#endif
         if (show_dialog) {
             void *memory = user_interface_malloc_tracked(sizeof(c_load_dialog_screen_message), 0, 0);
             if (memory) {

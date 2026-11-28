@@ -81,6 +81,14 @@
 #include <ppcintrinsics.h>
 #include "interface/gui_widget.h"
 #include "interface/gui_screens/dialog/gui_screen_dialog.h"
+#ifdef HALO3_64BIT
+#include "saved_games/saved_game_files.h"
+extern "C" unsigned long g_saved_game_personal_storage_generation;
+extern "C" bool saved_game_files_read_game_options_for_player_count(
+    e_controller_index controller_index, long player_count, game_options *options);
+extern "C" void saved_game_files_delete_personal_storage_for_player_count(
+    long controller_index, long player_count);
+#endif
 
 enum e_network_game_privacy;
 enum e_session_game_start_status;
@@ -169,10 +177,132 @@ extern "C" bool user_interface_networking_is_throttled(void)
 }
 
 
+#ifdef HALO3_64BIT
+struct s_cached_saved_game_info
+{
+    unsigned long generation;
+    long content_item;
+    s_player_identifier owner;
+    unsigned char checked_mask;
+    unsigned char valid_mask;
+};
+
+static s_cached_saved_game_info g_cached_saved_game_info[4];
+
+static bool user_interface_controller_has_saved_game(e_controller_index controller_index, long player_count)
+{
+    if ((unsigned long)controller_index >= 4 || player_count < 1 || player_count > 4)
+        return false;
+    c_controller_interface *controller = controller_get(controller_index);
+    if (!controller || !controller->in_use() || !controller->is_signed_in_to_machine())
+        return false;
+
+    s_cached_saved_game_info &cache = g_cached_saved_game_info[controller_index];
+    long content_item = saved_game_files_get_personal_storage_content_item(controller_index, false);
+    if (content_item == -1) {
+        cache.generation = 0;
+        cache.content_item = -1;
+        cache.checked_mask = 0;
+        cache.valid_mask = 0;
+        return false;
+    }
+
+    s_player_identifier owner_storage;
+    const s_player_identifier *owner = controller->get_player_identifier(&owner_storage);
+    if (cache.generation != g_saved_game_personal_storage_generation ||
+        cache.content_item != content_item ||
+        memcmp(&cache.owner, owner, sizeof(s_player_identifier)) != 0)
+    {
+        cache.generation = g_saved_game_personal_storage_generation;
+        cache.content_item = content_item;
+        cache.owner = *owner;
+        cache.checked_mask = 0;
+        cache.valid_mask = 0;
+    }
+
+    unsigned char bit = (unsigned char)(1u << (player_count - 1));
+    if ((cache.checked_mask & bit) == 0) {
+        game_options options;
+        bool valid = saved_game_files_read_game_options_for_player_count(controller_index, player_count, &options);
+        cache.generation = g_saved_game_personal_storage_generation;
+        cache.checked_mask |= bit;
+        if (valid)
+            cache.valid_mask |= bit;
+        else
+            cache.valid_mask = (unsigned char)(cache.valid_mask & ~bit);
+    }
+    return (cache.valid_mask & bit) != 0;
+}
+
+extern "C" bool user_interface_networking_has_matching_saved_game(e_controller_index fallback_controller)
+{
+    if (user_interface_squad_exists()) {
+        return user_interface_networking_get_saved_game_controller() != k_no_controller;
+    }
+    long signed_in_count = 0;
+    for (long i = 0; i < 4; ++i) {
+        if (controller_get((e_controller_index)i)->in_use())
+            ++signed_in_count;
+    }
+    if (signed_in_count < 1 || signed_in_count > 4)
+        return false;
+    if ((unsigned long)fallback_controller < 4)
+        return user_interface_controller_has_saved_game(fallback_controller, signed_in_count);
+    for (long i = 0; i < 4; ++i) {
+        if (user_interface_controller_has_saved_game((e_controller_index)i, signed_in_count))
+            return true;
+    }
+    return false;
+}
+
+extern "C" void user_interface_networking_delete_squad_saved_games(e_controller_index fallback_controller)
+{
+    if (user_interface_squad_exists()) {
+        long total_players = user_interface_squad_get_player_count();
+        long local_players = user_interface_squad_get_local_player_count();
+        if (total_players >= 1 && total_players <= 4 && local_players == total_players) {
+            for (long player_index = 0; player_index < 16; ++player_index) {
+                if (user_interface_squad_is_player_valid(player_index)) {
+                    e_controller_index ctrl = user_interface_squad_get_controller_index(player_index);
+                    if ((unsigned long)ctrl < 4)
+                        saved_game_files_delete_personal_storage_for_player_count(ctrl, total_players);
+                }
+            }
+        }
+        return;
+    }
+    if ((unsigned long)fallback_controller < 4) {
+        long signed_in_count = 0;
+        for (long i = 0; i < 4; ++i) {
+            if (controller_get((e_controller_index)i)->in_use())
+                ++signed_in_count;
+        }
+        if (signed_in_count < 1 || signed_in_count > 4)
+            signed_in_count = 1;
+        saved_game_files_delete_personal_storage_for_player_count(fallback_controller, signed_in_count);
+    }
+}
+#endif
+
 // 0x4791e0
 e_controller_index user_interface_networking_get_saved_game_controller(void)
 {
     e_controller_index result = k_no_controller;
+#ifdef HALO3_64BIT
+    long total_players = user_interface_squad_get_player_count();
+    long local_players = user_interface_squad_get_local_player_count();
+    if (total_players >= 1 && total_players <= 4 && local_players == total_players) {
+        for (long player_index = 0; player_index < 16; player_index++) {
+            if (user_interface_squad_is_player_valid(player_index)) {
+                e_controller_index ctrl = user_interface_squad_get_controller_index(player_index);
+                if (ctrl != k_no_controller && user_interface_controller_has_saved_game(ctrl, total_players)) {
+                    result = ctrl;
+                    break;
+                }
+            }
+        }
+    }
+#else
     if (user_interface_squad_get_player_count() == 1) {
         for (long player_index = 0; player_index < 16; player_index++) {
             if (user_interface_squad_is_player_valid(player_index) &&
@@ -182,6 +312,7 @@ e_controller_index user_interface_networking_get_saved_game_controller(void)
             }
         }
     }
+#endif
     return result;
 }
 
@@ -774,7 +905,16 @@ extern "C" void user_interface_initialize_coop_game_settings(int unused_context,
     game_options options;
     __lwsync();
     _InterlockedExchange(&g_user_interface_globals.active_controller.value, -1);
+#ifdef HALO3_64BIT
+    long total_players = user_interface_squad_exists() ? user_interface_squad_get_player_count() : 1;
+    long local_players = user_interface_squad_exists() ? user_interface_squad_get_local_player_count() : total_players;
+    bool read_ok = total_players >= 1 && total_players <= 4 && local_players == total_players
+        && saved_game_files_read_game_options_for_player_count(
+            (e_controller_index)controller_index, total_players, &options);
+    if (read_ok
+#else
     if (::game_state_read_game_options_from_persistent_storage_blocking((e_controller_index)controller_index, &options)
+#endif
         && user_interface_squad_set_map(options.campaign_id, options.map_id)
         && network_squad_session_set_campaign_difficulty((e_campaign_difficulty_level)options.campaign_difficulty)
         && network_squad_session_set_primary_skulls(options.primary_skulls)

@@ -478,6 +478,11 @@ static __forceinline bool pregame_setup_controller_in_use(const c_controller_int
 // XDK C++03 unions cannot contain game_options or c_game_variant constructors.
 // These overlapping buffers are filled by the storage and setup APIs.
 
+#ifdef HALO3_64BIT
+extern "C" bool saved_game_files_read_game_options_for_player_count(
+    e_controller_index controller_index, long player_count, game_options *options);
+#endif
+
 // @address 0x4a2f48 gui_pregame_setup_manager_apply_pending_setup
 extern "C" void gui_pregame_setup_manager_apply_pending_setup(c_gui_pregame_setup_manager *manager, s_pregame_setup_params *setup)
 {
@@ -502,8 +507,43 @@ extern "C" void gui_pregame_setup_manager_apply_pending_setup(c_gui_pregame_setu
         long difficulty = -1;
         long primary_skulls = 0;
         long secondary_skulls = 0;
+        long metagame_scoring = 0;
         unsigned short insertion_point = 0;
         bool setup_valid = false;
+#ifdef HALO3_64BIT
+        long target_players = 0;
+        if (user_interface_squad_exists()) {
+            long total = user_interface_squad_get_player_count();
+            if (total >= 1 && total <= 4 && user_interface_squad_get_local_player_count() == total)
+                target_players = total;
+        } else {
+            for (long i = 0; i < 4; ++i) {
+                if (pregame_setup_controller_in_use(controller_get((e_controller_index)i)))
+                    ++target_players;
+            }
+        }
+        if (target_players >= 1 && target_players <= 4) {
+            for (long controller_index = 0; controller_index < 4; controller_index++) {
+                c_controller_interface *controller = controller_get((e_controller_index)controller_index);
+                if (pregame_setup_controller_in_use(controller)) {
+                    new (&options_buffer) game_options;
+                    if (saved_game_files_read_game_options_for_player_count(
+                            (e_controller_index)controller_index, target_players, (game_options *)&options_buffer))
+                    {
+                        setup_valid = true;
+                        campaign_id = options_buffer.options().campaign_id;
+                        map_id = options_buffer.options().map_id;
+                        difficulty = options_buffer.options().campaign_difficulty;
+                        primary_skulls = options_buffer.options().primary_skulls;
+                        secondary_skulls = options_buffer.options().secondary_skulls;
+                        metagame_scoring = options_buffer.options().campaign_metagame_scoring;
+                        insertion_point = options_buffer.options().campaign_insertion_point;
+                        break;
+                    }
+                }
+            }
+        }
+#else
         if (user_interface_squad_get_player_count() == 1) {
             for (long controller_index = 0; controller_index < 4; controller_index++) {
                 c_controller_interface *controller = controller_get((e_controller_index)controller_index);
@@ -525,6 +565,7 @@ extern "C" void gui_pregame_setup_manager_apply_pending_setup(c_gui_pregame_setu
                 }
             }
         }
+#endif
         if (!setup_valid) {
             if (!(campaign->valid && campaign->campaign_id >= 0
                 && campaign->difficulty >= 0 && campaign->difficulty < 4 && campaign->map_id >= 0)) {
@@ -569,7 +610,7 @@ extern "C" void gui_pregame_setup_manager_apply_pending_setup(c_gui_pregame_setu
                 network_squad_session_set_map(_campaign_id_pre_game_fallback, _map_id_pre_game_fallback, map_name);
         }
         network_squad_session_set_campaign_difficulty((e_campaign_difficulty_level)difficulty);
-        network_squad_session_set_campaign_metagame_scoring(0);
+        network_squad_session_set_campaign_metagame_scoring(metagame_scoring);
         network_squad_session_set_primary_skulls(primary_skulls);
         network_squad_session_set_secondary_skulls(secondary_skulls);
         network_squad_session_set_campaign_insertion_point(insertion_point);

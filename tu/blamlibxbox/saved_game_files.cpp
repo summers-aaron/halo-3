@@ -124,6 +124,10 @@
 #include "game/map_variant_files.h"
 #include "sound/sound_cache_inline.h"
 #include "tag_files/string_ids.h"
+#ifdef HALO3_64BIT
+#include "game/game_state_accessors.h"
+#include "interface/user_interface_session.h"
+#endif
 
 // @flags /TP /O2 /Oc
 // @address 0x1b7030 ?in_use@c_controller_interface@@QBA_NXZ
@@ -544,9 +548,18 @@ extern "C" {
 // 0x1e75c8
 
 
+#ifdef HALO3_64BIT
+extern "C" unsigned long g_saved_game_personal_storage_generation = 1;
+extern "C" void saved_game_files_delete_personal_storage_for_player_count(long controller_index, long player_count);
+static long saved_game_files_get_active_player_count(void);
+#endif
+
 // @address 0x1e7b48 saved_game_files_delete_personal_storage
 extern "C" void saved_game_files_delete_personal_storage(long controller_index)
 {
+#ifdef HALO3_64BIT
+    saved_game_files_delete_personal_storage_for_player_count(controller_index, saved_game_files_get_active_player_count());
+#else
     if (((c_controller_interface *)&controller_globals().controllers[controller_index])->is_signed_in_to_machine()) {
         c_content_catalogue *catalogue = (c_content_catalogue *)&content_catalogues().catalogues[controller_index];
         long content_item = saved_game_files_get_personal_storage_content_item((e_controller_index)controller_index, false);
@@ -555,6 +568,7 @@ extern "C" void saved_game_files_delete_personal_storage(long controller_index)
             content_catalogue_delete_item(catalogue, content_item, true);
         }
     }
+#endif
 }
 
 // @address 0x1eba38 saved_game_files_delete_content_item
@@ -563,6 +577,9 @@ void saved_game_files_delete_content_item(long controller_index, long content_it
     c_content_catalogue *catalogue = (c_content_catalogue *)&content_catalogues().catalogues[controller_index];
     content_catalogue_close_item(catalogue, content_item_index, true);
     content_catalogue_delete_item(catalogue, content_item_index, true);
+#ifdef HALO3_64BIT
+    ++g_saved_game_personal_storage_generation;
+#endif
 }
 
 // 0x1e7be8
@@ -1875,9 +1892,228 @@ struct s_synchronization_globals;
 
 
 class c_content_catalogue;
+#ifdef HALO3_64BIT
+static void saved_game_files_get_slot_file_names(
+    long player_count,
+    const char **out_header_name,
+    const char **out_state_name,
+    const char **out_tmp_header_name,
+    const char **out_tmp_state_name)
+{
+    const char *header_name = "gamestate.hdr";
+    const char *state_name = "mmiof.bmf";
+    const char *tmp_header_name = "gamestate.tmp";
+    const char *tmp_state_name = "mmiof.tmp";
+    switch (player_count) {
+    case 2:
+        header_name = "gamestate_2p.hdr";
+        state_name = "mmiof_2p.bmf";
+        tmp_header_name = "gamestate_2p.tmp";
+        tmp_state_name = "mmiof_2p.tmp";
+        break;
+    case 3:
+        header_name = "gamestate_3p.hdr";
+        state_name = "mmiof_3p.bmf";
+        tmp_header_name = "gamestate_3p.tmp";
+        tmp_state_name = "mmiof_3p.tmp";
+        break;
+    case 4:
+        header_name = "gamestate_4p.hdr";
+        state_name = "mmiof_4p.bmf";
+        tmp_header_name = "gamestate_4p.tmp";
+        tmp_state_name = "mmiof_4p.tmp";
+        break;
+    default:
+        break;
+    }
+    if (out_header_name)
+        *out_header_name = header_name;
+    if (out_state_name)
+        *out_state_name = state_name;
+    if (out_tmp_header_name)
+        *out_tmp_header_name = tmp_header_name;
+    if (out_tmp_state_name)
+        *out_tmp_state_name = tmp_state_name;
+}
+
+static long saved_game_files_get_active_player_count(void)
+{
+    if (game_in_progress() && tls_game_globals() && tls_game_globals()->options.game_mode == 1) {
+        long active_players = 0;
+        for (long player_index = 0; player_index < 16; ++player_index) {
+            if (tls_game_globals()->options.players[player_index].valid)
+                ++active_players;
+        }
+        if (active_players >= 1 && active_players <= 4)
+            return active_players;
+    }
+    if (user_interface_squad_exists()) {
+        long squad_players = user_interface_squad_get_player_count();
+        if (squad_players >= 1 && squad_players <= 4)
+            return squad_players;
+    }
+    long signed_in_players = 0;
+    for (long controller_index = 0; controller_index < 4; ++controller_index) {
+        if (((c_controller_interface *)&controller_globals().controllers[controller_index])->in_use())
+            ++signed_in_players;
+    }
+    if (signed_in_players >= 1 && signed_in_players <= 4)
+        return signed_in_players;
+    return 1;
+}
+
+static bool saved_game_files_container_has_any_save(e_controller_index controller_index)
+{
+    if ((unsigned long)controller_index >= 4)
+        return false;
+    s_controller *controller = &controller_globals().controllers[controller_index];
+    for (long slot = 1; slot <= 4; ++slot) {
+        const char *header_name = 0;
+        saved_game_files_get_slot_file_names(slot, &header_name, 0, 0, 0);
+        s_file_reference file;
+        if (::saved_game_files_create_saved_game_file_reference(
+                controller_index, (wchar_t const *)controller->display_name, header_name, &file, false, false) &&
+            file_exists(&file))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void saved_game_files_delete_slot_files_in_ready_container(
+    e_controller_index controller_index,
+    s_controller *controller,
+    c_content_catalogue *catalogue,
+    long content_item,
+    long player_count)
+{
+    const char *names[4] = { 0, 0, 0, 0 };
+    saved_game_files_get_slot_file_names(player_count, &names[0], &names[1], &names[2], &names[3]);
+    for (long i = 0; i < 4; ++i) {
+        s_file_reference file;
+        if (names[i] &&
+            ::saved_game_files_create_saved_game_file_reference(
+                controller_index, (wchar_t const *)controller->display_name, names[i], &file, false, false) &&
+            file_exists(&file))
+        {
+            file_delete(&file);
+        }
+    }
+    if (!saved_game_files_container_has_any_save(controller_index)) {
+        saved_game_files_delete_content_item(controller_index, content_item);
+    } else {
+        content_catalogue_flush_item(catalogue, content_item, true);
+        ++g_saved_game_personal_storage_generation;
+    }
+}
+
+extern "C" void saved_game_files_delete_personal_storage_for_player_count(long controller_index, long player_count)
+{
+    if ((unsigned long)controller_index >= 4 || player_count < 1 || player_count > 4)
+        return;
+    s_controller *controller = &controller_globals().controllers[controller_index];
+    if (!((c_controller_interface *)controller)->is_signed_in_to_machine())
+        return;
+    c_content_catalogue *catalogue = (c_content_catalogue *)&content_catalogues().catalogues[controller_index];
+    long content_item = saved_game_files_get_personal_storage_content_item((e_controller_index)controller_index, false);
+    if (content_item != -1 && ((s_content_item *)catalogue)->make_ready_for_access(content_item, true)) {
+        saved_game_files_delete_slot_files_in_ready_container(
+            (e_controller_index)controller_index, controller, catalogue, content_item, player_count);
+    }
+}
+
+static bool saved_game_files_get_game_state_options_for_player_count(
+    e_controller_index controller_index,
+    long player_count,
+    void *buffer,
+    long buffer_size)
+{
+    (void)buffer_size;
+    if ((unsigned long)controller_index >= 4 || player_count < 1 || player_count > 4 || !buffer)
+        return false;
+    s_controller *controller = &controller_globals().controllers[controller_index];
+    if (!((c_controller_interface *)controller)->is_signed_in_to_machine())
+        return false;
+
+    long content_item = saved_game_files_get_personal_storage_content_item(controller_index, false);
+    c_content_catalogue *catalogue = (c_content_catalogue *)&content_catalogues().catalogues[controller_index];
+    if (content_item == -1 || !((s_content_item *)catalogue)->make_ready_for_access(content_item, true))
+        return false;
+
+    const char *header_name = 0;
+    const char *state_name = 0;
+    saved_game_files_get_slot_file_names(player_count, &header_name, &state_name, 0, 0);
+
+    s_file_reference header_file;
+    s_file_reference state_file;
+    bool have_refs =
+        ::saved_game_files_create_saved_game_file_reference(
+            controller_index, (wchar_t const *)controller->display_name, header_name, &header_file, false, false) &&
+        ::saved_game_files_create_saved_game_file_reference(
+            controller_index, (wchar_t const *)controller->display_name, state_name, &state_file, false, false);
+    if (!have_refs)
+        return false;
+
+    if (!file_exists(&header_file)) {
+        if (file_exists(&state_file)) {
+            saved_game_files_delete_slot_files_in_ready_container(
+                controller_index, controller, catalogue, content_item, player_count);
+        } else if (!saved_game_files_container_has_any_save(controller_index)) {
+            saved_game_files_delete_content_item(controller_index, content_item);
+        }
+        return false;
+    }
+
+    bool result = false;
+    unsigned long open_error = 0;
+    if (file_exists(&state_file) && file_open(&header_file, 1, &open_error)) {
+        result = file_read(&header_file, 0xf998, false, buffer);
+        file_close(&header_file);
+        if (result && !game_state_saved_game_header_valid((const game_state_header *)buffer))
+            result = false;
+    }
+    if (!result) {
+        saved_game_files_delete_slot_files_in_ready_container(
+            controller_index, controller, catalogue, content_item, player_count);
+    }
+    return result;
+}
+
+extern "C" bool saved_game_files_read_game_options_for_player_count(
+    e_controller_index controller_index,
+    long player_count,
+    game_options *options)
+{
+    if (!options || player_count < 1 || player_count > 4)
+        return false;
+    game_state_header header;
+    if (!saved_game_files_get_game_state_options_for_player_count(
+            controller_index, player_count, &header, sizeof(header)))
+    {
+        return false;
+    }
+    if (header.game_options.game_mode != 1)
+        return false;
+    long valid_players = 0;
+    for (long player_index = 0; player_index < 16; ++player_index) {
+        if (header.game_options.players[player_index].valid)
+            ++valid_players;
+    }
+    if (valid_players != player_count)
+        return false;
+    memcpy(options, &header.game_options, sizeof(*options));
+    return true;
+}
+#endif
+
 // @address 0x1e75c8 saved_game_files_get_game_state_options
 bool saved_game_files_get_game_state_options(e_controller_index controller_index, void *buffer, long buffer_size)
 {
+#ifdef HALO3_64BIT
+    return saved_game_files_get_game_state_options_for_player_count(
+        controller_index, saved_game_files_get_active_player_count(), buffer, buffer_size);
+#else
     s_controller *controller = &controller_globals().controllers[controller_index];
     s_file_reference file;
     unsigned long open_error;
@@ -1901,10 +2137,44 @@ bool saved_game_files_get_game_state_options(e_controller_index controller_index
         }
     }
     return result;
+#endif
 }
 // @address 0x1e76f8 ?saved_game_files_get_saved_game_state_header@@YA_NW4e_controller_index@@PAUgame_state_header@@J@Z
 bool saved_game_files_get_saved_game_state_header(e_controller_index controller_index, game_state_header *header, long header_size)
 {
+#ifdef HALO3_64BIT
+    (void)header_size;
+    if ((unsigned long)controller_index >= 4 || !header)
+        return false;
+    long player_count = saved_game_files_get_active_player_count();
+    const char *state_name = 0;
+    saved_game_files_get_slot_file_names(player_count, 0, &state_name, 0, 0);
+
+    s_controller *controller = &controller_globals().controllers[controller_index];
+    s_file_reference file;
+    unsigned long open_error = 0;
+    bool result = false;
+
+    if (((c_controller_interface *)controller)->is_signed_in_to_machine()) {
+        long content_item = saved_game_files_get_personal_storage_content_item(controller_index, false);
+        c_content_catalogue *catalogue = (c_content_catalogue *)&content_catalogues().catalogues[controller_index];
+        if (content_item != -1 && ((s_content_item *)catalogue)->make_ready_for_access(content_item, true)) {
+            if (::saved_game_files_create_saved_game_file_reference(
+                    controller_index, (wchar_t const *)controller->display_name, state_name, &file, false, false) &&
+                file_exists(&file) &&
+                file_open(&file, 1, &open_error))
+            {
+                result = file_read(&file, 0x7e0000, false, header);
+                file_close(&file);
+            }
+            if (!result) {
+                saved_game_files_delete_slot_files_in_ready_container(
+                    controller_index, controller, catalogue, content_item, player_count);
+            }
+        }
+    }
+    return result;
+#else
     s_controller *controller = &controller_globals().controllers[controller_index];
     s_file_reference file;
     unsigned long open_error;
@@ -1928,12 +2198,321 @@ bool saved_game_files_get_saved_game_state_header(e_controller_index controller_
         }
     }
     return result;
+#endif
 }
 
+
+#ifdef HALO3_64BIT
+struct s_saved_game_async_autosave_target
+{
+    long controller_index;
+    long content_item;
+    const char *final_header_name;
+    const char *final_state_name;
+    s_file_reference tmp_header_file;
+    s_file_reference tmp_state_file;
+    s_file_reference header_file;
+    s_file_reference state_file;
+    bool succeeded;
+};
+
+struct s_saved_game_async_autosave_state
+{
+    long target_count;
+    const void *buffer;
+    c_synchronized_long done;
+    s_saved_game_async_autosave_target targets[4];
+};
+
+static s_saved_game_async_autosave_state g_saved_game_async_autosave_state;
+
+static bool saved_game_files_write_atomic_target(
+    const s_saved_game_async_autosave_target *target,
+    const game_state_header *header,
+    const void *buffer)
+{
+    s_file_reference tmp_header = target->tmp_header_file;
+    s_file_reference tmp_state = target->tmp_state_file;
+    s_file_reference final_header = target->header_file;
+    s_file_reference final_state = target->state_file;
+    unsigned long open_error = 0;
+    bool wrote_tmp = false;
+
+    if (file_exists(&tmp_header))
+        file_delete(&tmp_header);
+    if (file_exists(&tmp_state))
+        file_delete(&tmp_state);
+
+    if (file_create(&tmp_header) && file_open(&tmp_header, 2, &open_error)) {
+        wrote_tmp = file_write(&tmp_header, sizeof(game_state_header), header);
+        file_close(&tmp_header);
+    }
+    if (wrote_tmp) {
+        wrote_tmp = false;
+        if (file_create(&tmp_state) && file_open(&tmp_state, 2, &open_error)) {
+            wrote_tmp = file_write(&tmp_state, 0x7e0000, buffer);
+            file_close(&tmp_state);
+        }
+    }
+
+    if (!wrote_tmp) {
+        if (file_exists(&tmp_header))
+            file_delete(&tmp_header);
+        if (file_exists(&tmp_state))
+            file_delete(&tmp_state);
+        return false;
+    }
+
+    if (file_exists(&final_header))
+        file_delete(&final_header);
+    if (file_exists(&final_state))
+        file_delete(&final_state);
+
+    if (!file_rename(&tmp_state, target->final_state_name)) {
+        if (file_exists(&tmp_header))
+            file_delete(&tmp_header);
+        if (file_exists(&tmp_state))
+            file_delete(&tmp_state);
+        return false;
+    }
+    if (!file_rename(&tmp_header, target->final_header_name)) {
+        if (file_exists(&tmp_header))
+            file_delete(&tmp_header);
+        if (file_exists(&final_state))
+            file_delete(&final_state);
+        return false;
+    }
+    return true;
+}
+
+static long saved_game_files_collect_autosave_targets(
+    const game_state_header *header,
+    s_saved_game_async_autosave_target (&targets)[4])
+{
+    long target_count = 0;
+    long signed_in_count = 0;
+    if (!game_state_saved_game_header_valid(header))
+        return 0;
+
+    long valid_players = 0;
+    for (unsigned long player_index = 0; player_index < 16; ++player_index) {
+        if (header->game_options.players[player_index].valid)
+            ++valid_players;
+    }
+    if (valid_players < 1 || valid_players > 4)
+        return 0;
+
+    const char *header_name = 0;
+    const char *state_name = 0;
+    const char *tmp_header_name = 0;
+    const char *tmp_state_name = 0;
+    saved_game_files_get_slot_file_names(
+        valid_players, &header_name, &state_name, &tmp_header_name, &tmp_state_name);
+
+    for (long controller_index = 0; controller_index < 4; ++controller_index) {
+        if (((c_controller_interface *)&controller_globals().controllers[controller_index])->is_signed_in_to_machine())
+            ++signed_in_count;
+    }
+
+    for (long controller_index = 0; controller_index < 4; ++controller_index) {
+        s_controller *controller = &controller_globals().controllers[controller_index];
+        if (!((c_controller_interface *)controller)->is_signed_in_to_machine())
+            continue;
+
+        s_player_identifier identifier_storage;
+        const s_player_identifier *identifier = ((c_controller_interface *)controller)->get_player_identifier(&identifier_storage);
+        bool matches = false;
+        for (unsigned long player_index = 0; player_index < 16; ++player_index) {
+            const game_player_options *player = &header->game_options.players[player_index];
+            if (player->valid && memcmp(&player->player_identifier, identifier, sizeof(s_player_identifier)) == 0) {
+                matches = true;
+                break;
+            }
+        }
+        if (!matches)
+            continue;
+
+        c_content_catalogue *catalogue = (c_content_catalogue *)&content_catalogues().catalogues[controller_index];
+        long content_item = saved_game_files_get_personal_storage_content_item((e_controller_index)controller_index, true);
+        if (content_item != -1 && ((s_content_item *)catalogue)->make_ready_for_access(content_item, true)) {
+            s_saved_game_async_autosave_target &target = targets[target_count];
+            target.controller_index = controller_index;
+            target.content_item = content_item;
+            target.final_header_name = header_name;
+            target.final_state_name = state_name;
+            target.succeeded = false;
+            if (saved_game_files_create_saved_game_file_reference((e_controller_index)controller_index, controller->display_name,
+                    tmp_header_name, &target.tmp_header_file, false, true) &&
+                saved_game_files_create_saved_game_file_reference((e_controller_index)controller_index, controller->display_name,
+                    tmp_state_name, &target.tmp_state_file, false, true) &&
+                saved_game_files_create_saved_game_file_reference((e_controller_index)controller_index, controller->display_name,
+                    header_name, &target.header_file, false, true) &&
+                saved_game_files_create_saved_game_file_reference((e_controller_index)controller_index, controller->display_name,
+                    state_name, &target.state_file, false, true))
+            {
+                ++target_count;
+            }
+        }
+    }
+    (void)signed_in_count;
+    return target_count;
+}
+
+static void saved_game_files_finalize_autosave_targets(
+    const s_saved_game_async_autosave_target *targets,
+    long target_count)
+{
+    for (long index = 0; index < target_count; ++index) {
+        const s_saved_game_async_autosave_target &target = targets[index];
+        c_content_catalogue *catalogue = (c_content_catalogue *)&content_catalogues().catalogues[target.controller_index];
+        if (target.succeeded) {
+            content_catalogue_flush_item(catalogue, target.content_item, true);
+        } else if (!file_exists(&target.header_file) &&
+                   !saved_game_files_container_has_any_save((e_controller_index)target.controller_index))
+        {
+            saved_game_files_delete_content_item(target.controller_index, target.content_item);
+        }
+    }
+    if (target_count > 0)
+        ++g_saved_game_personal_storage_generation;
+}
+
+static e_async_completion saved_game_files_commit_async_autosave_callback(s_async_task *)
+{
+    const void *buffer = g_saved_game_async_autosave_state.buffer;
+    const game_state_header *header = (const game_state_header *)buffer;
+    if (buffer != 0) {
+        for (long index = 0; index < g_saved_game_async_autosave_state.target_count; ++index) {
+            s_saved_game_async_autosave_target &target = g_saved_game_async_autosave_state.targets[index];
+            target.succeeded = saved_game_files_write_atomic_target(&target, header, buffer);
+        }
+    }
+    __lwsync();
+    _InterlockedExchange(&g_saved_game_async_autosave_state.done.value, 1);
+    return (e_async_completion)1;
+}
+
+extern "C" void saved_game_files_prepare_async_autosave(const game_state_header *header)
+{
+    g_saved_game_async_autosave_state.buffer = 0;
+    __lwsync();
+    _InterlockedExchange(&g_saved_game_async_autosave_state.done.value, 0);
+    saved_game_files_write_saved_game_state(header, 0, 0, -1);
+}
+
+extern "C" bool saved_game_files_has_prepared_async_autosave(void)
+{
+    return g_saved_game_async_autosave_state.target_count > 0;
+}
+
+extern "C" void saved_game_files_cancel_async_autosave(void)
+{
+    g_saved_game_async_autosave_state.target_count = 0;
+    g_saved_game_async_autosave_state.buffer = 0;
+    __lwsync();
+    _InterlockedExchange(&g_saved_game_async_autosave_state.done.value, 0);
+}
+
+extern "C" bool saved_game_files_start_async_autosave_commit(const void *hashed_buffer)
+{
+    if (g_saved_game_async_autosave_state.target_count <= 0 || hashed_buffer == 0) {
+        saved_game_files_cancel_async_autosave();
+        return false;
+    }
+    g_saved_game_async_autosave_state.buffer = hashed_buffer;
+    __lwsync();
+    _InterlockedExchange(&g_saved_game_async_autosave_state.done.value, 0);
+    s_async_task task;
+    memset(&task, 0, sizeof(task));
+    long task_id = ::async_task_add_ex(_async_priority_blocking_generic, &task, _async_category_saved_games,
+        saved_game_files_commit_async_autosave_callback, &g_saved_game_async_autosave_state.done, true);
+    if (task_id == -1) {
+        saved_game_files_commit_async_autosave_callback(&task);
+        saved_game_files_finalize_autosave_targets(
+            g_saved_game_async_autosave_state.targets, g_saved_game_async_autosave_state.target_count);
+        saved_game_files_cancel_async_autosave();
+        return false;
+    }
+    return true;
+}
+
+extern "C" bool saved_game_files_is_async_autosave_commit_done(void)
+{
+    long done = g_saved_game_async_autosave_state.done.value;
+    __lwsync();
+    return done != 0;
+}
+
+extern "C" void saved_game_files_finish_async_autosave(void)
+{
+    if (g_saved_game_async_autosave_state.target_count > 0) {
+        saved_game_files_finalize_autosave_targets(
+            g_saved_game_async_autosave_state.targets, g_saved_game_async_autosave_state.target_count);
+    }
+    saved_game_files_cancel_async_autosave();
+}
+
+extern "C" void saved_game_files_delete_campaign_session_saved_game_state(const game_options *options)
+{
+    if (!options || options->game_mode != 1)
+        return;
+    long session_player_count = 0;
+    for (long player_index = 0; player_index < 16; ++player_index) {
+        if (options->players[player_index].valid)
+            ++session_player_count;
+    }
+    if (session_player_count < 1 || session_player_count > 4)
+        return;
+
+    for (long controller_index = 0; controller_index < 4; ++controller_index) {
+        saved_game_files_delete_personal_storage_for_player_count(controller_index, session_player_count);
+    }
+}
+#endif
 
 // @address 0x1e7820 ?saved_game_files_write_saved_game_state@@YAXPBUgame_state_header@@JPBXJ@Z
 void saved_game_files_write_saved_game_state(const game_state_header *header, long header_size, const void *buffer, long buffer_size)
 {
+#ifdef HALO3_64BIT
+    (void)header_size;
+    s_saved_game_async_autosave_target local_targets[4];
+    s_saved_game_async_autosave_target (&targets)[4] =
+        (buffer == 0 && buffer_size == -1) ? g_saved_game_async_autosave_state.targets : local_targets;
+    long target_count = saved_game_files_collect_autosave_targets(header, targets);
+
+    long valid_players = 0;
+    long signed_in_count = 0;
+    if (header) {
+        for (unsigned long player_index = 0; player_index < 16; ++player_index) {
+            if (header->game_options.players[player_index].valid)
+                ++valid_players;
+        }
+    }
+    for (long controller_index = 0; controller_index < 4; ++controller_index) {
+        if (((c_controller_interface *)&controller_globals().controllers[controller_index])->is_signed_in_to_machine())
+            ++signed_in_count;
+    }
+    for (long index = 0; index < target_count; ++index) {
+        s_controller *controller = &controller_globals().controllers[targets[index].controller_index];
+        c_player_profile_interface *profile = controller->get_player_profile_interface();
+        if (profile) {
+            __int64 time = _time64(0);
+            long cooperative = (valid_players > 1 || signed_in_count > 1) ? 1 : 0;
+            profile->dirty_or(false);
+            profile->campaign.last_campaign_played_time[cooperative] = time;
+        }
+    }
+
+    if (buffer == 0 && buffer_size == -1) {
+        g_saved_game_async_autosave_state.target_count = target_count;
+        return;
+    }
+
+    for (long index = 0; index < target_count; ++index) {
+        targets[index].succeeded = saved_game_files_write_atomic_target(&targets[index], header, buffer);
+    }
+    saved_game_files_finalize_autosave_targets(targets, target_count);
+#else
     long signed_in_count = 0;
     if (game_state_saved_game_header_valid(header)) {
         long controller_index = 0;
@@ -2008,6 +2587,7 @@ void saved_game_files_write_saved_game_state(const game_state_header *header, lo
             controller_index = next_controller_index;
         } while (controller_index != -1);
     }
+#endif
 }
 // @address 0x1e7be8 saved_game_files_read
 extern "C" long saved_game_files_read(long catalogue_index, long content_item_index, void *buffer, unsigned long size,

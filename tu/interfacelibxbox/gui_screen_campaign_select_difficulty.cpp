@@ -166,13 +166,22 @@ static __forceinline bool gui_screen_campaign_select_difficulty_handle_device_se
     return handled;
 }
 
+#ifdef HALO3_64BIT
+extern "C" bool user_interface_networking_has_matching_saved_game(e_controller_index fallback_controller);
+extern "C" void user_interface_networking_delete_squad_saved_games(e_controller_index fallback_controller);
+#endif
+
 // @address 0x4c35b0 ?handle_dialog_result@c_gui_screen_campaign_select_difficulty@@UAA_NPBVc_dialog_result_message@@@Z
 bool c_gui_screen_campaign_select_difficulty::handle_dialog_result(const c_dialog_result_message *message)
 {
     bool handled = false;
     if (message->get_dialog_name() == 0x3001f) {
         if (message->get_dialog_result() == 0) {
+#ifdef HALO3_64BIT
+            user_interface_networking_delete_squad_saved_games(message->get_controller());
+#else
             saved_game_files_delete_personal_storage(message->get_controller());
+#endif
             difficulty_chosen_immediate(message->get_controller());
         }
         handled = true;
@@ -191,10 +200,16 @@ bool c_gui_screen_campaign_select_difficulty::handle_list_item_chosen(
     bool choice_handled = false;
     if (list_name == _string_id_difficulty)
     {
+#ifdef HALO3_64BIT
+        bool show_overwrite_dialog = (long)m_mode == 2
+            && user_interface_squad_exists()
+            && user_interface_networking_has_matching_saved_game(message->get_controller());
+#else
         bool has_personal_storage_item = false;
         if (saved_game_files_get_personal_storage_content_item(message->get_controller(), false) != -1)
             has_personal_storage_item = true;
         bool show_overwrite_dialog = has_personal_storage_item && user_interface_squad_get_player_count() == 1;
+#endif
         if (show_overwrite_dialog != 0)
         {
             void *dialog_storage = user_interface_malloc_tracked(sizeof(c_load_dialog_screen_message), 0, 0);

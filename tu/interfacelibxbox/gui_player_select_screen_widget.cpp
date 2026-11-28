@@ -445,13 +445,22 @@ bool c_player_select_medals_datasource::get_integer_value(long index, long prope
 
 
 
+#ifdef HALO3_64BIT
+extern "C" bool user_interface_networking_has_matching_saved_game(e_controller_index fallback_controller);
+extern "C" void user_interface_networking_delete_squad_saved_games(e_controller_index fallback_controller);
+#endif
+
 // @address 0x4c2a30 player_select_test_and_show_load_dialog
 extern "C" bool player_select_test_and_show_load_dialog(c_gui_screen_widget *screen, e_controller_index controller)
 {
+#ifdef HALO3_64BIT
+    bool result = user_interface_squad_exists() && user_interface_networking_has_matching_saved_game(controller);
+#else
     bool has_content = false;
     if (saved_game_files_get_personal_storage_content_item(controller, false) != -1)
         has_content = true;
     bool result = has_content && user_interface_squad_get_player_count() == 1;
+#endif
     if (result)
     {
         void *memory = user_interface_malloc_tracked(sizeof(c_load_dialog_screen_message), 0, 0);
@@ -1859,7 +1868,11 @@ bool c_gui_screen_campaign_settings::handle_dialog_result(const c_dialog_result_
     bool handled = false;
     if (message->m_dialog_name == _player_select_string_campaign_changing_setting_will_delete_saved_game) {
         if (message->m_dialog_result == 0)
+#ifdef HALO3_64BIT
+            user_interface_networking_delete_squad_saved_games((e_controller_index)message->m_controller);
+#else
             saved_game_files_delete_personal_storage(message->m_controller);
+#endif
         handled = true;
     }
     if ((unsigned char)handled == 0) {

@@ -201,7 +201,12 @@ void c_start_menu_game_campaign::initialize_datasource()
                             (((unsigned int)(globals->options.game_mode == 1 ? globals->options.primary_skulls : 0) & 1u) != 0))
                             item->set_disabled_element(0x29c, 0x11f);
                     }
+#ifdef HALO3_64BIT
+                    if (user_interface_squad_exists()
+                        && user_interface_squad_get_local_player_count() != user_interface_squad_get_player_count())
+#else
                     if (user_interface_squad_exists() && user_interface_squad_get_player_count() != 1)
+#endif
                         item->set_disabled_element(0x29c, 0x121);
                     else
                         item->set_disabled_element(0x29c, 0x106);

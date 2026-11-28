@@ -634,8 +634,14 @@ bool c_gui_screen_pregame_lobby::handle_list_item_chosen(
                     } else if (column_value == _pregame_lobby_string_start_game) {
                         if (::user_interface_squad_start_countdown_timer(message->get_controller(), 6, 4)) {
                             e_controller_index controller_index = user_interface_networking_get_saved_game_controller();
+#ifdef HALO3_64BIT
+                            long total_players = ::user_interface_squad_get_player_count();
+                            if ((unsigned long)controller_index <= 3 && total_players >= 1 && total_players <= 4 &&
+                                ::user_interface_squad_get_local_player_count() == total_players)
+#else
                             if ((unsigned long)controller_index <= 3 && ::user_interface_squad_get_player_count() == 1 &&
                                 gui_screen_pregame_lobby_controller_has_saved_game_state(controller_index))
+#endif
                                 gui_screen_pregame_lobby_set_reload_from_persistent_storage(controller_index);
                             else
                                 gui_screen_pregame_lobby_set_reload_from_persistent_storage(_controller_none);
