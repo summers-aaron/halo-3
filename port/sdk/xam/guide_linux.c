@@ -723,8 +723,8 @@ static int guide_window_open(guide_window *w)
                                       : GUIDE_SINGLE_WIDTH;
     w->height = GUIDE_HEIGHT;
 
-    // centred over the game window
-    const x_window game = (x_window)port_window_native_window();
+    // centred over the game window (when the game window itself is X11)
+    const x_window game = port_window_system() == PORT_WINDOW_SYSTEM_XLIB ? (x_window)port_window_native_window() : 0;
     int x = 0, y = 0;
     x_window ignored_root = 0, ignored_child = 0;
     int game_x = 0, game_y = 0;

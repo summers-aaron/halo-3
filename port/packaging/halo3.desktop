@@ -6,6 +6,7 @@ Exec=halo3-launcher %f
 Icon=halo3
 Categories=Game;ActionGame;Shooter;
 Terminal=false
+StartupWMClass=halo3
 MimeType=application/x-cd-image;
 Actions=Setup;
 

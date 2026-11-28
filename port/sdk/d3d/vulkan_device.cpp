@@ -586,6 +586,7 @@ void placed_unlock() { __atomic_store_n(&g_placed_lock, 0, __ATOMIC_RELEASE); }
 // window and dumps
 int g_window;
 int g_window_closed;
+int g_window_explicit_res;
 uint32_t g_window_width, g_window_height;
 // the swapchain's vsync (FIFO) as it was made, and port_config_revision then: the vsync setting and the frame rate cap
 // apply live (Guide > Settings), so a present remakes the swapchain once they ask for the other present mode
@@ -6109,6 +6110,8 @@ void dump_frame(const void *pixels, uint32_t width, uint32_t height)
         report(0x64756d70u, "cannot write frame dumps", path);
 }
 
+uint32_t configured_frame_rate();
+
 // Whether the swapchain presents with vsync (FIFO): at the console's 30 frames a second; above it the frames are paced
 // by the D3D device's vertical blanks (port_vk_frame_rate) and presented without waiting for the display.
 // HALO3_VSYNC=0 / 1 decides either way; without it, halo3.ini's vsync (auto, 1, 0), which the Guide changes live.
@@ -6122,7 +6125,7 @@ uint32_t swapchain_fifo()
     } else {
         vsync = port_config_vsync();
     }
-    return vsync >= 0 ? (uint32_t)vsync : port_vk_frame_rate() == 30u ? 1u : 0u;
+    return vsync >= 0 ? (uint32_t)vsync : configured_frame_rate() == 30u ? 1u : 0u;
 }
 
 void create_swapchain()
@@ -6130,7 +6133,12 @@ void create_swapchain()
     g_swapchain_revision = port_config_revision();
     const uint32_t fifo = swapchain_fifo();
     g_swapchain_fifo = fifo;
-    gpu_result result = gpu_swapchain_create(g_gpu, g_window_width, g_window_height, fifo);
+    const uint32_t scale = __atomic_load_n(&g_res_scale, __ATOMIC_RELAXED);
+    const uint32_t width = !g_window_explicit_res && g_back_buffer_width != 0 ? g_back_buffer_width * scale
+                                                                              : g_window_width;
+    const uint32_t height = !g_window_explicit_res && g_back_buffer_height != 0 ? g_back_buffer_height * scale
+                                                                                : g_window_height;
+    gpu_result result = gpu_swapchain_create(g_gpu, width, height, fifo);
     if (result != k_gpu_ok) {
         device_log_text("swapchain creation failed: ");
         port_write_error(gpu_result_string(result));
@@ -6550,8 +6558,13 @@ int PORT_MS_ABI port_vulkan_device_startup(unsigned int back_buffer_width, unsig
     const char *window = getenv("HALO3_WINDOW");
     g_window_width = back_buffer_width;
     g_window_height = back_buffer_height;
-    if (getenv("HALO3_RES") != 0 && !parse_resolution(getenv("HALO3_RES"), &g_window_width, &g_window_height))
-        log_text("HALO3_RES is not WxH; using the back buffer size\n");
+    g_window_explicit_res = 0;
+    if (const char *res = getenv("HALO3_RES")) {
+        if (parse_resolution(res, &g_window_width, &g_window_height))
+            g_window_explicit_res = 1;
+        else
+            log_text("HALO3_RES is not WxH; using the back buffer size\n");
+    }
     g_window = window != 0 && window[0] == '1' && window[1] == '\0';
     if (g_window && !port_window_open("Halo 3", g_window_width, g_window_height)) {
         log_text("no window (see above); rendering offscreen\n");
@@ -7390,6 +7403,9 @@ void PORT_MS_ABI port_vk_resize_back_buffer(unsigned int width, unsigned int hei
     __atomic_store_n(&g_res_scale, res_scale, __ATOMIC_RELAXED);
     g_back_buffer = gpu_render_target_create(g_gpu, width * g_res_scale, height * g_res_scale,
                                              k_gpu_format_b8g8r8a8_unorm, 0);
+    if (g_window && !g_window_closed && !g_window_explicit_res &&
+        port_window_system() == PORT_WINDOW_SYSTEM_WAYLAND)
+        create_swapchain();
     pass_format_changed();
 }
 
@@ -9836,13 +9852,15 @@ uint32_t PORT_MS_ABI port_vk_frame_count(void)
     return __atomic_load_n(&g_presented, __ATOMIC_ACQUIRE);
 }
 
+namespace {
+
 // HALO3_FPS, parsed once: 30 (default), 31..1000, or 0 (uncapped); 0xffffffff until parsed. Unless the launch set
 // HALO3_FPS, halo3.ini's fps_cap then follows the Guide's Settings page live (port_config_fps_cap): the vertical blanks,
 // the frame blanks and the interpolation below all follow the rate as it is now.
 uint32_t g_frame_rate = 0xffffffffu;
 unsigned long g_frame_rate_revision; // port_config_revision when g_frame_rate was decided
 
-uint32_t PORT_MS_ABI port_vk_frame_rate(void)
+uint32_t configured_frame_rate()
 {
     uint32_t rate = __atomic_load_n(&g_frame_rate, __ATOMIC_ACQUIRE);
     const unsigned long revision = port_config_revision();
@@ -9885,6 +9903,41 @@ uint32_t PORT_MS_ABI port_vk_frame_rate(void)
             port_write_error(rate == 0u ? "off" : digits);
             port_write_error(" (halo3.ini fps_cap)\n");
         }
+    }
+    return rate;
+}
+
+// HALO3_BG_FPS: background frame rate cap while the OS window is unfocused (default 30; 0 disables throttling).
+// Throttling drops high-Hz frame interpolation back to the console's native 30 Hz cadence while unfocused without
+// recreating the swapchain (swapchain_fifo reads configured_frame_rate).
+uint32_t background_frame_rate()
+{
+    static uint32_t bg_rate = 0xffffffffu;
+    uint32_t rate = __atomic_load_n(&bg_rate, __ATOMIC_ACQUIRE);
+    if (rate == 0xffffffffu) {
+        rate = 30u;
+        if (const char *text = getenv("HALO3_BG_FPS")) {
+            uint32_t n = 0;
+            const char *c = text;
+            for (; *c >= '0' && *c <= '9' && n <= 100000u; c++)
+                n = n * 10u + (uint32_t)(*c - '0');
+            if (c != text && *c == 0 && (n == 0u || (n >= 30u && n <= 1000u)))
+                rate = n;
+        }
+        __atomic_store_n(&bg_rate, rate, __ATOMIC_RELEASE);
+    }
+    return rate;
+}
+
+} // namespace
+
+uint32_t PORT_MS_ABI port_vk_frame_rate(void)
+{
+    const uint32_t rate = configured_frame_rate();
+    if (g_window && !g_window_closed && !port_window_is_focused()) {
+        const uint32_t bg = background_frame_rate();
+        if (bg != 0u && (rate == 0u || rate > bg))
+            return bg;
     }
     return rate;
 }

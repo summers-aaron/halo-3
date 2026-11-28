@@ -73,6 +73,7 @@ extern "C" {
 #define VK_KHR_WIN32_SURFACE_EXTENSION_NAME     "VK_KHR_win32_surface"
 #define VK_KHR_XLIB_SURFACE_EXTENSION_NAME      "VK_KHR_xlib_surface"
 #define VK_KHR_XCB_SURFACE_EXTENSION_NAME       "VK_KHR_xcb_surface"
+#define VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME   "VK_KHR_wayland_surface"
 #define VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME  "VK_EXT_headless_surface"
 #define VK_EXT_DEBUG_UTILS_EXTENSION_NAME       "VK_EXT_debug_utils"
 
@@ -207,6 +208,7 @@ typedef VkFlags VkShaderStageFlags;
 typedef VkFlags VkSubmitFlags;
 typedef VkFlags VkSurfaceTransformFlagsKHR;
 typedef VkFlags VkSwapchainCreateFlagsKHR;
+typedef VkFlags VkWaylandSurfaceCreateFlagsKHR;
 typedef VkFlags VkWin32SurfaceCreateFlagsKHR;
 typedef VkFlags VkXcbSurfaceCreateFlagsKHR;
 typedef VkFlags VkXlibSurfaceCreateFlagsKHR;
@@ -313,6 +315,7 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_PRESENT_INFO_KHR = 1000001001,
     VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR = 1000004000,
     VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR = 1000005000,
+    VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR = 1000006000,
     VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR = 1000009000,
     VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT = 1000128000,
     VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT = 1000128002,
@@ -2387,6 +2390,14 @@ typedef struct VkXcbSurfaceCreateInfoKHR {
     uint32_t                      window;       /* xcb_window_t */
 } VkXcbSurfaceCreateInfoKHR;
 
+typedef struct VkWaylandSurfaceCreateInfoKHR {
+    VkStructureType                   sType;
+    const void*                       pNext;
+    VkWaylandSurfaceCreateFlagsKHR    flags;
+    struct wl_display*                display;  /* wl_display* */
+    struct wl_surface*                surface;  /* wl_surface* */
+} VkWaylandSurfaceCreateInfoKHR;
+
 /* ---- entry points ---- */
 
 typedef void (VKAPI_PTR *PFN_vkVoidFunction)(void);
@@ -2413,6 +2424,7 @@ typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)(VkPh
 typedef VkResult (VKAPI_PTR *PFN_vkCreateWin32SurfaceKHR)(VkInstance instance, const VkWin32SurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateXlibSurfaceKHR)(VkInstance instance, const VkXlibSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateXcbSurfaceKHR)(VkInstance instance, const VkXcbSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateHeadlessSurfaceEXT)(VkInstance instance, const VkHeadlessSurfaceCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateDebugUtilsMessengerEXT)(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pMessenger);
 typedef void (VKAPI_PTR *PFN_vkDestroyDebugUtilsMessengerEXT)(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator);
@@ -2569,6 +2581,7 @@ typedef VkResult (VKAPI_PTR *PFN_vkQueuePresentKHR)(VkQueue queue, const VkPrese
     X(vkCreateWin32SurfaceKHR) \
     X(vkCreateXlibSurfaceKHR) \
     X(vkCreateXcbSurfaceKHR) \
+    X(vkCreateWaylandSurfaceKHR) \
     X(vkCreateHeadlessSurfaceEXT) \
     X(vkCreateDebugUtilsMessengerEXT) \
     X(vkDestroyDebugUtilsMessengerEXT)

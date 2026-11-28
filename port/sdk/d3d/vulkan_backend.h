@@ -68,6 +68,7 @@ enum e_vulkan_window_system {
     k_vulkan_window_system_xlib = 2,     /* VK_KHR_xlib_surface */
     k_vulkan_window_system_xcb = 3,      /* VK_KHR_xcb_surface */
     k_vulkan_window_system_headless = 4, /* VK_EXT_headless_surface: a swapchain with no window (testing) */
+    k_vulkan_window_system_wayland = 5,  /* VK_KHR_wayland_surface */
 };
 
 struct s_vulkan_backend_create_info {
@@ -725,6 +726,7 @@ void vulkan_cmd_readback(s_vulkan_backend *backend, s_vulkan_render_target *targ
 VkResult vulkan_surface_create_win32(s_vulkan_backend *backend, void *hinstance, void *hwnd);
 VkResult vulkan_surface_create_xlib(s_vulkan_backend *backend, void *display, unsigned long window);
 VkResult vulkan_surface_create_xcb(s_vulkan_backend *backend, void *connection, uint32_t window);
+VkResult vulkan_surface_create_wayland(s_vulkan_backend *backend, void *display, void *surface);
 VkResult vulkan_surface_create_headless(s_vulkan_backend *backend);
 void vulkan_surface_destroy(s_vulkan_backend *backend);
 /* Creates (or re-creates, after VK_ERROR_OUT_OF_DATE_KHR) the swapchain; width and height are used when the surface

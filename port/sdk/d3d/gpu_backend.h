@@ -292,6 +292,7 @@ enum e_gpu_window_system {
     k_gpu_window_system_xlib = 2,
     k_gpu_window_system_xcb = 3,
     k_gpu_window_system_headless = 4, /* a swapchain with no window (testing) */
+    k_gpu_window_system_wayland = 5,
 };
 
 struct s_gpu_backend_create_info {

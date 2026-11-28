@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #define PORT_JS_BUTTON_MAX 128
+#define PORT_JS_SCAN_MAX 32
 
 // What a joystick axis feeds.
 enum {
@@ -51,6 +52,8 @@ static const unsigned char k_xpad_axes[8] = { ABS_X, ABS_Y, ABS_Z, ABS_RX, ABS_R
 
 static struct {
     int fd;               // -1: not open
+    int js_index;         // /dev/input/js<js_index>; -1: not open
+    int rank;             // 2: hardware pad, 1: virtual Steam Input pad
     long long next_probe; // monotonic ms
     unsigned short buttons;
     short axes[k_axis_role_count];
@@ -142,6 +145,110 @@ static signed char axis_role(unsigned char code, int has_pedals)
     }
 }
 
+// Appends `text` to the message being built in `line` (NUL-terminated, `size` bytes).
+static void append(char *line, unsigned size, const char *text)
+{
+    unsigned n = 0;
+    while (line[n] != 0)
+        n++;
+    for (; *text != 0 && n + 1 < size; text++)
+        line[n++] = *text;
+    line[n] = 0;
+}
+
+static void append_uint(char *line, unsigned size, unsigned value)
+{
+    char digits[12];
+    unsigned d = 0;
+    do {
+        digits[d++] = (char)('0' + value % 10u);
+        value /= 10u;
+    } while (value != 0 && d < sizeof(digits));
+    char text[13];
+    unsigned i = 0;
+    while (d > 0)
+        text[i++] = digits[--d];
+    text[i] = 0;
+    append(line, size, text);
+}
+
+static void format_js_path(char *out, unsigned size, const char *prefix, int js_index, const char *suffix)
+{
+    out[0] = 0;
+    append(out, size, prefix);
+    append_uint(out, size, (unsigned)js_index);
+    append(out, size, suffix);
+}
+
+static int read_sysfs_id(int js_index, const char *leaf, char *out, unsigned cap)
+{
+    char path[96];
+    format_js_path(path, sizeof(path), "/sys/class/input/js", js_index, "/device/id/");
+    append(path, sizeof(path), leaf);
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0)
+        return 0;
+    ssize_t got = read(fd, out, cap - 1);
+    close(fd);
+    if (got <= 0)
+        return 0;
+    while (got > 0 && (out[got - 1] == '\n' || out[got - 1] == '\r' || out[got - 1] == ' '))
+        got--;
+    out[got] = 0;
+    return 1;
+}
+
+static int text_starts_with(const char *s, const char *prefix)
+{
+    for (; *prefix != 0; s++, prefix++)
+        if (*s != *prefix)
+            return 0;
+    return 1;
+}
+
+// Classifies an open /dev/input/js<js_index>:
+//   0 = not a gamepad (virtual mouse/keyboard HID, motion/IMU sensor, rudder/pedal device)
+//   1 = virtual Steam Input gamepad (28de:11ff / "Microsoft X-Box 360 pad N")
+//   2 = physical hardware gamepad
+static int classify_gamepad(int fd, int js_index)
+{
+    unsigned char axis_count = 0, button_count = 0;
+    unsigned char axis_codes[ABS_CNT];
+    unsigned short button_codes[KEY_MAX - BTN_MISC + 1];
+    if (ioctl(fd, JSIOCGAXES, &axis_count) >= 0 && ioctl(fd, JSIOCGBUTTONS, &button_count) >= 0 &&
+        ioctl(fd, JSIOCGAXMAP, axis_codes) >= 0 && ioctl(fd, JSIOCGBTNMAP, button_codes) >= 0) {
+        int has_pedals = 0;
+        for (unsigned i = 0; i < axis_count && i < ABS_CNT; i++)
+            has_pedals |= axis_codes[i] == ABS_GAS || axis_codes[i] == ABS_BRAKE;
+        unsigned mapped_buttons = 0, stick_axes = 0;
+        for (unsigned i = 0; i < button_count && i < PORT_JS_BUTTON_MAX; i++) {
+            const unsigned int bit = button_bit(button_codes[i]);
+            if (bit != 0 && bit != PORT_JS_DIGITAL_LT && bit != PORT_JS_DIGITAL_RT)
+                mapped_buttons++;
+        }
+        for (unsigned i = 0; i < axis_count && i < ABS_CNT; i++) {
+            const signed char role = axis_role(axis_codes[i], has_pedals);
+            if (role == k_axis_lx || role == k_axis_ly || role == k_axis_rx || role == k_axis_ry ||
+                role == k_axis_hat_x || role == k_axis_hat_y)
+                stick_axes++;
+        }
+        if (mapped_buttons < 2 || stick_axes < 2)
+            return 0;
+    }
+    char vendor[16] = "", product[16] = "";
+    if (read_sysfs_id(js_index, "vendor", vendor, sizeof(vendor)) &&
+        read_sysfs_id(js_index, "product", product, sizeof(product)) &&
+        text_starts_with(vendor, "28de") && text_starts_with(product, "11ff"))
+        return 1;
+    char name[128] = "";
+    if (ioctl(fd, JSIOCGNAME(sizeof(name)), name) >= 0) {
+        name[sizeof(name) - 1] = 0;
+        if (text_starts_with(name, "Microsoft X-Box 360 pad "))
+            return 1;
+    }
+    return 2;
+}
+
 // Builds the index maps of a freshly opened device from the codes the driver reports.
 static void build_maps(unsigned long user)
 {
@@ -168,24 +275,14 @@ static void build_maps(unsigned long user)
     char name[128] = "";
     ioctl(fd, JSIOCGNAME(sizeof(name)), name);
     name[sizeof(name) - 1] = 0;
-    char line[200] = "port: input: ";
-    unsigned n = 13;
-    for (const char *s = name; *s && n < sizeof(line) - 2; s++)
-        line[n++] = *s;
-    line[n++] = '\n';
-    line[n] = 0;
+    char line[224] = "port: input: controller ";
+    append_uint(line, sizeof(line), (unsigned)user);
+    append(line, sizeof(line), " (/dev/input/js");
+    append_uint(line, sizeof(line), (unsigned)g_pads[user].js_index);
+    append(line, sizeof(line), "): ");
+    append(line, sizeof(line), name);
+    append(line, sizeof(line), "\n");
     port_write_error(line);
-}
-
-// Appends `text` to the message being built in `line` (NUL-terminated, `size` bytes).
-static void append(char *line, unsigned size, const char *text)
-{
-    unsigned n = 0;
-    while (line[n] != 0)
-        n++;
-    for (; *text != 0 && n + 1 < size; text++)
-        line[n++] = *text;
-    line[n] = 0;
 }
 
 static void report_rumble(unsigned long user, const char *what, const char *path, const char *tail)
@@ -216,8 +313,10 @@ static void open_rumble(unsigned long user)
     g_pads[user].ff_fd = -1;
     g_pads[user].ff_id = -1;
     g_pads[user].ff_left = g_pads[user].ff_right = 0;
-    char device[] = "/sys/class/input/js0/device";
-    device[sizeof("/sys/class/input/js") - 1] = (char)('0' + user);
+    if (g_pads[user].js_index < 0)
+        return;
+    char device[64];
+    format_js_path(device, sizeof(device), "/sys/class/input/js", g_pads[user].js_index, "/device");
     DIR *directory = opendir(device);
     if (directory == 0)
         return;
@@ -271,8 +370,26 @@ static void close_pad(unsigned long user)
     close_rumble(user);
     close(g_pads[user].fd);
     g_pads[user].fd = -1;
+    g_pads[user].js_index = -1;
+    g_pads[user].rank = 0;
     reset_state(user);
     g_pads[user].next_probe = now_ms() + 2000;
+}
+
+static int js_already_open(int js_index)
+{
+    for (unsigned long i = 0; i < PORT_INPUT_USER_COUNT; i++)
+        if (g_pads[i].fd >= 0 && g_pads[i].js_index == js_index)
+            return 1;
+    return 0;
+}
+
+static int any_hardware_pad_open(void)
+{
+    for (unsigned long i = 0; i < PORT_INPUT_USER_COUNT; i++)
+        if (g_pads[i].fd >= 0 && g_pads[i].rank >= 2)
+            return 1;
+    return 0;
 }
 
 // Drains pending events. Returns 0 if the device is gone.
@@ -281,6 +398,8 @@ static int update_pad(unsigned long user)
     if (!g_pads_initialized) {
         for (unsigned long i = 0; i < PORT_INPUT_USER_COUNT; i++) {
             g_pads[i].fd = -1;
+            g_pads[i].js_index = -1;
+            g_pads[i].rank = 0;
             g_pads[i].ff_fd = -1;
             g_pads[i].ff_id = -1;
             reset_state(i);
@@ -290,13 +409,45 @@ static int update_pad(unsigned long user)
     if (g_pads[user].fd < 0) {
         if (now_ms() < g_pads[user].next_probe)
             return 0;
-        char path[] = "/dev/input/js0";
-        path[sizeof(path) - 2] = (char)('0' + user);
-        g_pads[user].fd = open(path, O_RDONLY | O_NONBLOCK);
-        if (g_pads[user].fd < 0) {
+        int chosen_fd = -1, chosen_js = -1, chosen_rank = 0;
+        int fallback_fd = -1, fallback_js = -1;
+        for (int js = 0; js < PORT_JS_SCAN_MAX; js++) {
+            if (js_already_open(js))
+                continue;
+            char path[32];
+            format_js_path(path, sizeof(path), "/dev/input/js", js, "");
+            const int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+            if (fd < 0)
+                continue;
+            const int rank = classify_gamepad(fd, js);
+            if (rank >= 2) {
+                chosen_fd = fd;
+                chosen_js = js;
+                chosen_rank = rank;
+                break;
+            }
+            if (rank == 1 && fallback_fd < 0) {
+                fallback_fd = fd;
+                fallback_js = js;
+            } else {
+                close(fd);
+            }
+        }
+        if (chosen_fd < 0 && fallback_fd >= 0 && !any_hardware_pad_open()) {
+            chosen_fd = fallback_fd;
+            chosen_js = fallback_js;
+            chosen_rank = 1;
+            fallback_fd = -1;
+        }
+        if (fallback_fd >= 0)
+            close(fallback_fd);
+        if (chosen_fd < 0) {
             g_pads[user].next_probe = now_ms() + 2000;
             return 0;
         }
+        g_pads[user].fd = chosen_fd;
+        g_pads[user].js_index = chosen_js;
+        g_pads[user].rank = chosen_rank;
         reset_state(user);
         build_maps(user);
         open_rumble(user);

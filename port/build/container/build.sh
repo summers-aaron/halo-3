@@ -527,6 +527,7 @@ EOF
       echo "==> Building deterministic Flatpak bundle ($app_id, runtime org.freedesktop.Platform/x86_64/$fp_rt)..."
       flatpak build-finish "$fpdir" \
         --share=ipc \
+        --socket=wayland \
         --socket=x11 \
         --socket=pulseaudio \
         --device=all \
