@@ -741,8 +741,8 @@ static const struct { unsigned char code; unsigned short button; } k_menu_layout
     { k_port_key_escape, PORT_XINPUT_B },          { k_port_key_backspace, PORT_XINPUT_B },
     { k_port_key_x, PORT_XINPUT_X },               { k_port_key_y, PORT_XINPUT_Y },
     { k_port_key_q, PORT_XINPUT_LEFT_SHOULDER },   { k_port_key_e, PORT_XINPUT_RIGHT_SHOULDER },
-    { k_port_key_tab, PORT_XINPUT_BACK },          { k_port_key_home, PORT_XINPUT_GUIDE },
-    { k_port_key_grave, PORT_XINPUT_GUIDE },
+    { k_port_key_tab, PORT_XINPUT_BACK },          { k_port_key_f1, PORT_XINPUT_START },
+    { k_port_key_home, PORT_XINPUT_GUIDE },        { k_port_key_grave, PORT_XINPUT_GUIDE },
 };
 
 // The poll's state (the game's thread).
