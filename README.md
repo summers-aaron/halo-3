@@ -1,6 +1,6 @@
 # Halo 3 PC Port
 
-Native 64-bit (`x86_64`) PC port of retail **Halo 3 (Xbox 360, 2007)** built from decompiled C++ game source and a clean-room implementation of the Xbox 360 runtime.
+Native 64-bit (`x86_64`) PC port of retail **Halo 3 (Xbox 360, 2007)** built from a **100% byte-matching decompilation** of the original Xbox 360 retail image (`default.xex`, Title ID `4D5307E6`, SHA-256 `98743335129649210f5ef8b1c11b20e9d68beb441e563b7f7369842a5a140899`) and a clean-room implementation of the Xbox 360 runtime.
 
 No Xbox 360 XDK, MCC files, or redistributed assets are required. Building and running requires only this repository and a retail Halo 3 Xbox 360 disc.
 
